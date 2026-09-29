@@ -1,0 +1,46 @@
+---
+description: React Bits UI library — shared components for shell and remotes
+globs: apps/**/*.{tsx,ts},packages/ui/**/*
+alwaysApply: false
+---
+
+# React Bits UI
+
+## Package
+
+- Общие UI-компоненты в **`@chrisasstanina/ui`** (`packages/ui`).
+- Не дублируй Aurora, BlurText, SpotlightCard и другие react-bits между shell и remotes.
+- Не импортируй UI из `apps/shell` в remotes — только через workspace package.
+
+## Когда подключать
+
+- **Shell** и **React-remotes** (`apps/remotes/*`) обязаны использовать `@chrisasstanina/ui` для общего визуального языка.
+- Тёмная тема, aurora-фон, blur-заголовки, glass-панели — стандарт для страниц приложений.
+
+## Доступные компоненты
+
+| Компонент | Назначение |
+|-----------|------------|
+| `Aurora` | Фоновый градиент как на главной |
+| `BlurText` | Анимированный заголовок |
+| `SpotlightCard` | Карточка приложения с hover-spotlight |
+| `GlassPanel` | Стеклянная панель для секций и форм |
+| `FadeIn` | Плавное появление элементов списка |
+| `cn` | Утилита для Tailwind-классов |
+
+## Новые компоненты
+
+1. Добавляй в `packages/ui/src/react-bits/`.
+2. Экспортируй из `packages/ui/src/index.ts`.
+3. Используй **motion** (`motion/react`) для анимаций — не добавляй тяжёлые UI-библиотеки без нужды.
+4. Строки UI — на **русском**.
+
+## Layout remotes
+
+- Remote `App` — full-bleed секция: `relative flex min-h-full flex-1 flex-col overflow-hidden` + `<Aurora />`.
+- Shell `RemoteAppPage` не добавляет лишних отступов — layout внутри remote.
+
+## React Bits (reactbits.dev)
+
+- Можно брать идеи и паттерны с [reactbits.dev](https://reactbits.dev).
+- Адаптируй под тёмную тему и `@chrisasstanina/ui`, не копируй inline в каждый app.

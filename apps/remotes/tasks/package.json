@@ -1,0 +1,31 @@
+{
+  "name": "@chrisasstanina/tasks",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build && npx concurrently -n watch,serve \"vite build --watch\" \"vite preview --port 5001 --strictPort\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@chrisasstanina/auth": "*",
+    "@chrisasstanina/firebase": "*",
+    "@chrisasstanina/shared-federation": "*",
+    "@tanstack/react-query": "^5.90.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@chrisasstanina/tsconfig": "*",
+    "@originjs/vite-plugin-federation": "^1.4.1",
+    "@tailwindcss/vite": "^4.1.16",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  }
+}

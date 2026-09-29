@@ -1,0 +1,7 @@
+{
+  "extends": "@chrisasstanina/tsconfig/base.json",
+  "compilerOptions": {
+    "resolveJsonModule": true
+  },
+  "include": ["src", "data"]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@chrisasstanina/ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "motion": "^12.23.24",
+    "tailwind-merge": "^3.3.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-router-dom": "^7.0.0"
+  },
+  "devDependencies": {
+    "@chrisasstanina/tsconfig": "*",
+    "@types/react": "^19.2.2",
+    "react": "^19.2.0",
+    "react-router-dom": "^7.9.4",
+    "typescript": "^5.9.3"
+  }
+}

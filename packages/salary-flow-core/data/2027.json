@@ -1,0 +1,28 @@
+{
+  "year": 2027,
+  "days": [
+    { "date": "2027-01-01", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "Новогодние каникулы" },
+    { "date": "2027-01-02", "isWorkingDay": false, "isHoliday": true, "isWeekend": true, "name": "Новогодние каникулы" },
+    { "date": "2027-01-03", "isWorkingDay": false, "isHoliday": true, "isWeekend": true, "name": "Новогодние каникулы" },
+    { "date": "2027-01-04", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "Новогодние каникулы" },
+    { "date": "2027-01-05", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "Новогодние каникулы" },
+    { "date": "2027-01-06", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "Новогодние каникулы" },
+    { "date": "2027-01-07", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "Рождество Христово" },
+    { "date": "2027-01-08", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "Новогодние каникулы" },
+    { "date": "2027-01-09", "isWorkingDay": false, "isHoliday": false, "isWeekend": true },
+    { "date": "2027-01-10", "isWorkingDay": false, "isHoliday": false, "isWeekend": true },
+    { "date": "2027-02-20", "isWorkingDay": true, "isHoliday": false, "isWeekend": false, "name": "Рабочая суббота (перенос на 22 февраля)" },
+    { "date": "2027-02-22", "isWorkingDay": false, "isHoliday": false, "isWeekend": true, "name": "Перенос с субботы 20 февраля" },
+    { "date": "2027-02-23", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "День защитника Отечества" },
+    { "date": "2027-03-08", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "Международный женский день" },
+    { "date": "2027-05-01", "isWorkingDay": false, "isHoliday": true, "isWeekend": true, "name": "Праздник Весны и Труда" },
+    { "date": "2027-05-03", "isWorkingDay": false, "isHoliday": false, "isWeekend": true, "name": "Перенос с субботы 1 мая" },
+    { "date": "2027-05-09", "isWorkingDay": false, "isHoliday": true, "isWeekend": true, "name": "День Победы" },
+    { "date": "2027-05-10", "isWorkingDay": false, "isHoliday": false, "isWeekend": true, "name": "Перенос с воскресенья 9 мая" },
+    { "date": "2027-06-12", "isWorkingDay": false, "isHoliday": true, "isWeekend": true, "name": "День России" },
+    { "date": "2027-06-14", "isWorkingDay": false, "isHoliday": false, "isWeekend": true, "name": "Перенос с субботы 12 июня" },
+    { "date": "2027-11-04", "isWorkingDay": false, "isHoliday": true, "isWeekend": false, "name": "День народного единства" },
+    { "date": "2027-11-05", "isWorkingDay": false, "isHoliday": false, "isWeekend": true, "name": "Перенос с субботы 2 января" },
+    { "date": "2027-12-31", "isWorkingDay": false, "isHoliday": false, "isWeekend": true, "name": "Перенос с воскресенья 3 января" }
+  ]
+}

@@ -1,0 +1,52 @@
+---
+description: Microfrontend architecture conventions for Chrisasstanina
+globs: apps/**/*
+alwaysApply: false
+---
+
+# Microfrontend Conventions
+
+## Structure
+
+- **Shell** (`apps/shell`): routing, layout, homepage, auth guard, federation host.
+- **Remotes** (`apps/remotes/{name}`): изолированные приложения на своих роутах `/apps/{name}`.
+
+## Module Federation
+
+- Plugin: `@originjs/vite-plugin-federation`.
+- Remote expose contract: `./App` → `./src/App.tsx` (единая точка входа).
+- Shared singletons: `react`, `react-dom`, `react-router-dom`, `@tanstack/react-query`.
+- Workspace packages `@chrisasstanina/auth`, `@chrisasstanina/firebase`, `@chrisasstanina/ui` — **singleton shared** в federation (один AuthContext и Firebase init на shell + remotes).
+- Config: `@chrisasstanina/shared-federation`.
+- **Dev**: remotes работают через `vite build --watch` + `vite preview` (порт 5001–5005), чтобы отдавать `remoteEntry.js`. Shell — `vite dev` на `:5173`.
+
+## Adding a New App
+
+1. Scaffold remote in `apps/remotes/{name}`.
+2. Add name to `REMOTE_NAMES` in `packages/shared-federation`.
+3. Register remote in shell `RemoteAppPage` loaders.
+4. Add homepage card via `APP_LABELS` / `APP_DESCRIPTIONS`.
+5. Firestore path: `families/{familyId}/apps/{name}/...`.
+
+## State Management
+
+- **Firestore data** → TanStack Query (`packages/firebase` hooks).
+- **UI state** (modals, filters) → Zustand per remote.
+- **Auth** → `@chrisasstanina/auth` Context (не дублировать в remotes).
+
+## Angular (future)
+
+- New remote in `apps/remotes/{name}` on Angular.
+- Use `@angular-architects/module-federation`.
+- Same expose contract: `./App`.
+- Register in shell federation remotes map.
+
+## Expo Web (cashback)
+
+- Placeholder remote until RN/Expo project is migrated.
+- Target flow: `expo export:web` → adapt entry → federation expose.
+
+## Deploy
+
+- GitHub Pages serves single `apps/shell/dist`.
+- Remotes built first, copied to `public/remotes/{name}/`, then shell build.

@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+apps/shell/public/remotes/*
+!apps/shell/public/remotes/.gitkeep
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.firebase
+coverage
