@@ -1,6 +1,25 @@
 <!doctype html>
 <html lang="ru">
   <head>
+    <script>
+      // Восстановление URL после redirect из 404.html (GitHub Pages SPA)
+      (function (locationRef) {
+        if (locationRef.search[1] === '/') {
+          var decoded = locationRef.search
+            .slice(1)
+            .split('&')
+            .map(function (segment) {
+              return segment.replace(/~and~/g, '&');
+            })
+            .join('?');
+          window.history.replaceState(
+            null,
+            null,
+            locationRef.pathname.slice(0, -1) + decoded + locationRef.hash,
+          );
+        }
+      })(window.location);
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Chrisasstanina — семейный hub приложений" />

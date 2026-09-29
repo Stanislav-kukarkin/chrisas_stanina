@@ -53,6 +53,9 @@ function validateSettings(settings: SalarySettings): string | null {
   return null;
 }
 
+const fieldClassName =
+  'w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-base text-zinc-100 sm:text-sm';
+
 export function SettingsModal({
   open,
   draftSettings,
@@ -73,6 +76,18 @@ export function SettingsModal({
     }
   }, [draftSettings, open, userId]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -91,10 +106,27 @@ export function SettingsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 md:items-center">
-      <GlassPanel animated={false} className="w-full max-w-lg p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-zinc-100">Настройки</h2>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="salary-settings-title"
+    >
+      <button
+        type="button"
+        aria-label="Закрыть настройки"
+        className="absolute inset-0 bg-black/60"
+        onClick={onClose}
+      />
+
+      <GlassPanel
+        animated={false}
+        className="relative z-10 flex max-h-[min(92dvh,100%)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl md:max-h-[min(85dvh,100%)] md:rounded-2xl"
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-zinc-800/80 px-4 py-3 sm:px-6">
+          <h2 id="salary-settings-title" className="text-lg font-medium text-zinc-100">
+            Настройки
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -104,175 +136,179 @@ export function SettingsModal({
           </button>
         </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <label className="block space-y-1 text-sm">
-            <span className="text-zinc-400">Месячная зарплата</span>
-            <input
-              type="number"
-              min={0}
-              step={1000}
-              value={draft.monthlySalary || ''}
-              placeholder="150000"
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  monthlySalary: event.target.value === '' ? 0 : Number(event.target.value),
-                }))
-              }
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
-            />
-          </label>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block space-y-1 text-sm">
-              <span className="text-zinc-400">Начало дня</span>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+            <label className="block space-y-1.5 text-sm">
+              <span className="text-zinc-400">Месячная зарплата</span>
               <input
-                type="time"
-                value={draft.workStart}
+                type="number"
+                min={0}
+                step={1000}
+                inputMode="numeric"
+                value={draft.monthlySalary || ''}
+                placeholder="150000"
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, workStart: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    monthlySalary: event.target.value === '' ? 0 : Number(event.target.value),
+                  }))
                 }
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
+                className={fieldClassName}
               />
             </label>
-            <label className="block space-y-1 text-sm">
-              <span className="text-zinc-400">
-                {draft.workEndsNextDay ? 'Конец (след. день)' : 'Конец дня'}
-              </span>
-              <input
-                type="time"
-                value={draft.workEnd}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, workEnd: event.target.value }))
-                }
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
-              />
-            </label>
-          </div>
 
-          <label className="flex items-center gap-3 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              checked={draft.workEndsNextDay}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, workEndsNextDay: event.target.checked }))
-              }
-              className="size-4 rounded border-zinc-600"
-            />
-            Конец рабочего дня на следующий календарный день
-          </label>
-
-          <label className="flex items-center gap-3 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              checked={draft.lunchEnabled}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, lunchEnabled: event.target.checked }))
-              }
-              className="size-4 rounded border-zinc-600"
-            />
-            Учитывать обед
-          </label>
-
-          {draft.lunchEnabled && (
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block space-y-1 text-sm">
-                <span className="text-zinc-400">Начало обеда</span>
+            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+              <label className="block space-y-1.5 text-sm">
+                <span className="text-zinc-400">Начало дня</span>
                 <input
                   type="time"
-                  value={draft.lunchStart}
+                  value={draft.workStart}
                   onChange={(event) =>
-                    setDraft((current) => ({ ...current, lunchStart: event.target.value }))
+                    setDraft((current) => ({ ...current, workStart: event.target.value }))
                   }
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
+                  className={fieldClassName}
                 />
               </label>
-              <label className="block space-y-1 text-sm">
-                <span className="text-zinc-400">Длительность (мин)</span>
+              <label className="block space-y-1.5 text-sm">
+                <span className="text-zinc-400">
+                  {draft.workEndsNextDay ? 'Конец (след. день)' : 'Конец дня'}
+                </span>
                 <input
-                  type="number"
-                  min={1}
-                  value={draft.lunchDurationMinutes}
+                  type="time"
+                  value={draft.workEnd}
                   onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      lunchDurationMinutes: Number(event.target.value),
-                    }))
+                    setDraft((current) => ({ ...current, workEnd: event.target.value }))
                   }
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
+                  className={fieldClassName}
                 />
               </label>
             </div>
-          )}
 
-          <label className="block space-y-1 text-sm">
-            <span className="text-zinc-400">Валюта</span>
-            <select
-              value={draft.currency}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, currency: event.target.value }))
-              }
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
-            >
-              <option value="RUB">₽ RUB</option>
-              <option value="USD">$ USD</option>
-              <option value="EUR">€ EUR</option>
-            </select>
-          </label>
+            <label className="flex items-start gap-3 text-sm leading-snug text-zinc-300">
+              <input
+                type="checkbox"
+                checked={draft.workEndsNextDay}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, workEndsNextDay: event.target.checked }))
+                }
+                className="mt-0.5 size-4 shrink-0 rounded border-zinc-600"
+              />
+              Конец рабочего дня на следующий календарный день
+            </label>
 
-          <fieldset className="space-y-2">
-            <legend className="text-sm text-zinc-400">Виджет прогресса</legend>
-            <div className="space-y-2">
-              {VISUALIZATION_OPTIONS.map((option) => {
-                const isSelected = draft.visualizationType === option.value;
-                return (
-                  <label
-                    key={option.value}
-                    className={cn(
-                      'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition',
-                      isSelected
-                        ? 'border-teal-500/50 bg-teal-500/10'
-                        : 'border-zinc-700 bg-zinc-900/50 hover:border-zinc-600',
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="visualizationType"
-                      value={option.value}
-                      checked={isSelected}
-                      onChange={() =>
-                        setDraft((current) => ({
-                          ...current,
-                          visualizationType: option.value,
-                        }))
-                      }
-                      className="mt-1 size-4 border-zinc-600"
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-zinc-100">{option.label}</span>
-                      <span className="mt-0.5 block text-xs text-zinc-500">{option.description}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
+            <label className="flex items-start gap-3 text-sm leading-snug text-zinc-300">
+              <input
+                type="checkbox"
+                checked={draft.lunchEnabled}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, lunchEnabled: event.target.checked }))
+                }
+                className="mt-0.5 size-4 shrink-0 rounded border-zinc-600"
+              />
+              Учитывать обед
+            </label>
 
-          <label className="block space-y-1 text-sm">
-            <span className="text-zinc-400">Часовой пояс</span>
-            <input
-              type="text"
-              value={draft.timezone}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, timezone: event.target.value }))
-              }
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
-            />
-          </label>
+            {draft.lunchEnabled && (
+              <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+                <label className="block space-y-1.5 text-sm">
+                  <span className="text-zinc-400">Начало обеда</span>
+                  <input
+                    type="time"
+                    value={draft.lunchStart}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, lunchStart: event.target.value }))
+                    }
+                    className={fieldClassName}
+                  />
+                </label>
+                <label className="block space-y-1.5 text-sm">
+                  <span className="text-zinc-400">Длительность (мин)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    value={draft.lunchDurationMinutes}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        lunchDurationMinutes: Number(event.target.value),
+                      }))
+                    }
+                    className={fieldClassName}
+                  />
+                </label>
+              </div>
+            )}
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+            <label className="block space-y-1.5 text-sm">
+              <span className="text-zinc-400">Валюта</span>
+              <select
+                value={draft.currency}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, currency: event.target.value }))
+                }
+                className={fieldClassName}
+              >
+                <option value="RUB">₽ RUB</option>
+                <option value="USD">$ USD</option>
+                <option value="EUR">€ EUR</option>
+              </select>
+            </label>
 
-          <div className="flex items-center justify-between gap-3 pt-2">
+            <fieldset className="space-y-2">
+              <legend className="text-sm text-zinc-400">Виджет прогресса</legend>
+              <div className="space-y-2">
+                {VISUALIZATION_OPTIONS.map((option) => {
+                  const isSelected = draft.visualizationType === option.value;
+                  return (
+                    <label
+                      key={option.value}
+                      className={cn(
+                        'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition',
+                        isSelected
+                          ? 'border-teal-500/50 bg-teal-500/10'
+                          : 'border-zinc-700 bg-zinc-900/50 hover:border-zinc-600',
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="visualizationType"
+                        value={option.value}
+                        checked={isSelected}
+                        onChange={() =>
+                          setDraft((current) => ({
+                            ...current,
+                            visualizationType: option.value,
+                          }))
+                        }
+                        className="mt-1 size-4 shrink-0 border-zinc-600"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-zinc-100">{option.label}</span>
+                        <span className="mt-0.5 block text-xs text-zinc-500">{option.description}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <label className="block space-y-1.5 text-sm">
+              <span className="text-zinc-400">Часовой пояс</span>
+              <input
+                type="text"
+                value={draft.timezone}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, timezone: event.target.value }))
+                }
+                className={fieldClassName}
+              />
+            </label>
+
+            {error && <p className="text-sm text-red-400">{error}</p>}
+          </div>
+
+          <div className="shrink-0 space-y-3 border-t border-zinc-800/80 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
             <label className="flex items-center gap-2 text-sm text-zinc-400">
               <input
                 type="checkbox"
@@ -283,11 +319,11 @@ export function SettingsModal({
               Запомнить выбор
             </label>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setDraft({ ...DEFAULT_SALARY_SETTINGS })}
-                className="rounded-xl px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200"
+                className="rounded-xl px-4 py-2.5 text-sm text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200 sm:py-2"
               >
                 Сбросить
               </button>
@@ -295,8 +331,8 @@ export function SettingsModal({
                 type="submit"
                 disabled={isSaving}
                 className={cn(
-                  'rounded-xl bg-teal-500/20 px-4 py-2 text-sm font-medium text-teal-300',
-                  'hover:bg-teal-500/30 disabled:opacity-50',
+                  'rounded-xl bg-teal-500/20 px-4 py-2.5 text-sm font-medium text-teal-300',
+                  'hover:bg-teal-500/30 disabled:opacity-50 sm:py-2',
                 )}
               >
                 {isSaving ? 'Сохранение...' : rememberChoice ? 'Сохранить' : 'Применить'}
