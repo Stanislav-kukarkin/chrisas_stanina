@@ -46,7 +46,5 @@ Thumbs.db
 *.swp
 *.swo
 
-# Cursor: правила проекта в репо, локальное состояние агента — нет
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**
+# Cursor (локальные правила и состояние агента)
+.cursor/
