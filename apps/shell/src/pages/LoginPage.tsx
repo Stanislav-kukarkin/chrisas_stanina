@@ -5,7 +5,7 @@ export function LoginPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/apps/tasks';
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
 
   if (user) {
     return <Navigate to={redirectTo} replace />;

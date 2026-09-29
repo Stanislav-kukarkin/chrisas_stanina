@@ -74,6 +74,13 @@ console.log(`Output: ${shellDist}`);
 if (existsSync(shellDist)) {
   const stats = statSync(shellDist);
   if (stats.isDirectory()) {
+    // GitHub Pages: client-side routes (/apps/*) → отдаём index.html через 404.html
+    const indexHtml = join(shellDist, 'index.html');
+    const notFoundHtml = join(shellDist, '404.html');
+    if (existsSync(indexHtml)) {
+      cpSync(indexHtml, notFoundHtml);
+      console.log('Created 404.html for SPA routing on GitHub Pages.');
+    }
     console.log('Ready for GitHub Pages deployment.');
   }
 }

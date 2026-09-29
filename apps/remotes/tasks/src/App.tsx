@@ -1,7 +1,9 @@
-import { useAuth } from '@chrisasstanina/auth';
+import { getFirebaseConfigFromEnv, initializeFirebase, useFirebaseUser } from '@chrisasstanina/firebase';
+
+initializeFirebase(getFirebaseConfigFromEnv());
 
 export default function App() {
-  const { user } = useAuth();
+  const user = useFirebaseUser();
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8">

@@ -38,7 +38,7 @@ export function ShellLayout() {
         <div className="flex w-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center" aria-label="Chrisasstanina">
             <img
-              src="/logo.png"
+              src={`${import.meta.env.BASE_URL}logo.png`}
               alt="Chrisasstanina"
               className="h-9 w-9 object-contain sm:h-10 sm:w-10"
             />
