@@ -19,12 +19,14 @@ const queryClient = new QueryClient({
   },
 });
 
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BootstrapProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={routerBasename || undefined}>
             <App />
           </BrowserRouter>
         </BootstrapProvider>

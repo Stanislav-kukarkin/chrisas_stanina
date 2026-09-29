@@ -29,9 +29,16 @@ export const APP_DESCRIPTIONS: Record<RemoteName, string> = {
   salary: 'Визуальный трекер заработка в реальном времени',
 };
 
+function normalizeBasePath(base = '/'): string {
+  if (!base || base === '/') return '/';
+  return base.endsWith('/') ? base : `${base}/`;
+}
+
 export function getRemoteEntryUrl(name: RemoteName, isDev: boolean): string {
   if (isDev) {
     return `http://localhost:${REMOTE_PORTS[name]}/assets/remoteEntry.js`;
   }
-  return `/remotes/${name}/assets/remoteEntry.js`;
+  const shellBase = normalizeBasePath(import.meta.env.BASE_URL);
+  const remoteBase = shellBase === '/' ? `/remotes/${name}/` : `${shellBase}remotes/${name}/`;
+  return `${remoteBase}assets/remoteEntry.js`;
 }

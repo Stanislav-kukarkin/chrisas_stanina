@@ -7,12 +7,14 @@ import {
   createHostFederationConfig,
   createWorkspaceAliases,
   federationBuildOptions,
+  getShellBasePath,
 } from '@chrisasstanina/shared-federation/federation';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => ({
   envDir: resolve(__dirname, '../..'),
+  base: getShellBasePath(),
   plugins: [react(), tailwindcss(), createHostFederationConfig({ isDev: mode === 'development' })],
   ...federationBuildOptions,
   server: {

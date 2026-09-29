@@ -5,6 +5,7 @@ import {
   createRemoteFederationConfig,
   createWorkspaceAliases,
   federationBuildOptions,
+  getRemoteViteBase,
 } from '@chrisasstanina/shared-federation/federation';
 
 import { dirname, resolve } from 'node:path';
@@ -12,8 +13,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   envDir: resolve(__dirname, '../../..'),
+  base: getRemoteViteBase('salary', mode === 'development'),
   plugins: [react(), tailwindcss(), createRemoteFederationConfig({ name: 'salary' })],
   ...federationBuildOptions,
   server: {
@@ -33,4 +35,4 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@chrisasstanina/ui', 'motion'],
   },
-});
+}));

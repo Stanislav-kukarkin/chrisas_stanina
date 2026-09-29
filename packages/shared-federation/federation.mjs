@@ -42,11 +42,32 @@ export const APP_DESCRIPTIONS = {
   salary: 'Визуальный трекер заработка в реальном времени',
 };
 
+export function normalizeBasePath(base = '/') {
+  if (!base || base === '/') return '/';
+  return base.endsWith('/') ? base : `${base}/`;
+}
+
+/** GitHub Pages project site: /chrisas_stanina/ — через VITE_BASE_PATH в CI */
+export function getShellBasePath() {
+  return normalizeBasePath(process.env.VITE_BASE_PATH);
+}
+
+export function getRemoteBasePath(name) {
+  const shellBase = getShellBasePath();
+  if (shellBase === '/') return `/remotes/${name}/`;
+  return `${shellBase}remotes/${name}/`;
+}
+
+export function getRemoteViteBase(name, isDev) {
+  if (isDev) return '/';
+  return getRemoteBasePath(name);
+}
+
 export function getRemoteEntryUrl(name, isDev) {
   if (isDev) {
     return `http://localhost:${REMOTE_PORTS[name]}/assets/remoteEntry.js`;
   }
-  return `/remotes/${name}/assets/remoteEntry.js`;
+  return `${getRemoteBasePath(name)}assets/remoteEntry.js`;
 }
 
 export function createSharedDependencies() {
