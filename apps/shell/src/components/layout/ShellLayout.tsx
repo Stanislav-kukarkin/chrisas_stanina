@@ -36,10 +36,10 @@ export function ShellLayout() {
       <FirebaseSetupBanner />
       <header className="sticky top-0 z-20 w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur">
         <div className="flex w-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center" aria-label="Chrisasstanina">
+          <Link to="/" className="flex items-center" aria-label="Семейный Hub">
             <img
               src={`${import.meta.env.BASE_URL}logo.png`}
-              alt="Chrisasstanina"
+              alt="Семейный Hub"
               className="h-9 w-9 object-contain sm:h-10 sm:w-10"
             />
           </Link>

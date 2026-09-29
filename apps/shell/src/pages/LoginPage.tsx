@@ -14,7 +14,7 @@ export function LoginPage() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-16">
       <div className="mx-auto max-w-lg text-center">
-        <h1 className="text-3xl font-semibold">Вход в семейный hub</h1>
+        <h1 className="text-3xl font-semibold">Вход в Семейный Hub</h1>
         <p className="mt-2 text-zinc-400">Используйте email и пароль, созданные в Firebase.</p>
       </div>
       <div className="mt-10">
