@@ -35,68 +35,75 @@ export function ShoppingItemRow({
   const toggleExpandedItem = useShoppingUiStore((state) => state.toggleExpandedItem);
   const expanded = expandedItemId === item.id;
 
+  const creatorBadge = (
+    <span
+      className="inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs text-zinc-200"
+      style={{ backgroundColor: `${creatorColor}33`, border: `1px solid ${creatorColor}55` }}
+      title={`Добавил: ${creatorLabel}`}
+    >
+      <span aria-hidden>{creatorEmoji}</span>
+      <span className="truncate">{creatorLabel}</span>
+    </span>
+  );
+
   return (
     <GlassPanel animated={false} className="border-zinc-800/90 bg-zinc-900/50">
-      <div className="flex items-center gap-3 px-3 py-3 sm:px-4">
-        <SpringCheck
-          checked={item.checked}
-          onChange={(checked) => onToggle(item.id, checked)}
-          label={
-            <>
-              {item.important && <span className="mr-1 text-amber-400">★</span>}
-              {item.name}
-            </>
-          }
-          ariaLabel={item.name}
-          color="#4d179a"
-          fillColor="#4d179a"
-          checkColor="#0b0b0f"
-          boxSize={28}
-          boxRadius={6}
-          fontSize={16}
-          bounce={0.2}
-          strikeLag={0.08}
-          doneOpacity={0.44}
-          strike="left"
-          className="min-w-0 flex-1"
-        />
-        <button
-          type="button"
-          onClick={() => toggleExpandedItem(item.id)}
-          className="shrink-0 rounded-md bg-zinc-950/60 px-2 py-0.5 text-xs text-zinc-400 transition hover:bg-zinc-800/80 hover:text-zinc-200"
-          aria-label="Подробнее"
-        >
-          {item.quantity} {item.unit}
-        </button>
-        <span
-          className="hidden shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs text-zinc-400 sm:flex"
-          style={{ backgroundColor: `${creatorColor}22` }}
-          title={`Добавил: ${creatorLabel}`}
-        >
-          <span>{creatorEmoji}</span>
-          <span className="max-w-[80px] truncate">{creatorLabel}</span>
-        </span>
-        <button
-          type="button"
-          onClick={() => onDelete(item.id)}
-          className="shrink-0 rounded-lg p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-400"
-          aria-label="Удалить"
-          title="Удалить"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="h-4 w-4"
-            aria-hidden
+      <div className="px-3 py-3 sm:px-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <SpringCheck
+            checked={item.checked}
+            onChange={(checked) => onToggle(item.id, checked)}
+            label={
+              <>
+                {item.important && <span className="mr-1 text-amber-400">★</span>}
+                {item.name}
+              </>
+            }
+            ariaLabel={item.name}
+            color="#f4f4f5"
+            fillColor="#8b5cf6"
+            checkColor="#fafafa"
+            boxSize={28}
+            boxRadius={6}
+            fontSize={16}
+            bounce={0.2}
+            strikeLag={0.08}
+            doneOpacity={0.58}
+            strike="left"
+            className="min-w-0 flex-1"
+          />
+          <button
+            type="button"
+            onClick={() => toggleExpandedItem(item.id)}
+            className="shrink-0 rounded-md bg-zinc-800/80 px-2 py-0.5 text-xs text-zinc-200 transition hover:bg-zinc-700 hover:text-white"
+            aria-label="Подробнее"
           >
-            <path
-              fillRule="evenodd"
-              d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 9.24A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-9.24.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
+            {item.quantity} {item.unit}
+          </button>
+          <span className="hidden shrink-0 sm:inline-flex">{creatorBadge}</span>
+          <button
+            type="button"
+            onClick={() => onDelete(item.id)}
+            className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"
+            aria-label="Удалить"
+            title="Удалить"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-4 w-4"
+              aria-hidden
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 9.24A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-9.24.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+        <div className="mt-1.5 pl-10 sm:hidden">{creatorBadge}</div>
       </div>
 
       {expanded && (
