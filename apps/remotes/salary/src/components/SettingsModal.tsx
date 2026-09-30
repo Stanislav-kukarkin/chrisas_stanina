@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   DEFAULT_SALARY_SETTINGS,
   getWorkDurationMinutes,
   type SalarySettings,
   type SalaryVisualizationType,
 } from '@chrisasstanina/salary-flow-core';
-import { GlassPanel, cn } from '@chrisasstanina/ui';
+import { cn } from '@chrisasstanina/ui';
 import {
   getRememberSettingsPreference,
   setRememberSettingsPreference,
@@ -105,7 +106,7 @@ export function SettingsModal({
     onClose();
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4"
       role="dialog"
@@ -119,10 +120,7 @@ export function SettingsModal({
         onClick={onClose}
       />
 
-      <GlassPanel
-        animated={false}
-        className="relative z-10 flex max-h-[min(92dvh,100%)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl md:max-h-[min(85dvh,100%)] md:rounded-2xl"
-      >
+      <div className="relative z-10 flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-zinc-800 bg-zinc-900/95 shadow-2xl md:rounded-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-800/80 px-4 py-3 sm:px-6">
           <h2 id="salary-settings-title" className="text-lg font-medium text-zinc-100">
             Настройки
@@ -136,8 +134,8 @@ export function SettingsModal({
           </button>
         </div>
 
-        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+        <form className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={handleSubmit}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-6">
             <label className="block space-y-1.5 text-sm">
               <span className="text-zinc-400">Месячная зарплата</span>
               <input
@@ -340,7 +338,8 @@ export function SettingsModal({
             </div>
           </div>
         </form>
-      </GlassPanel>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
