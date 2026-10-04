@@ -1,4 +1,12 @@
-export const REMOTE_NAMES = ['tasks', 'shopping', 'recipes', 'budget', 'cashback', 'salary'] as const;
+export const REMOTE_NAMES = [
+  'tasks',
+  'shopping',
+  'recipes',
+  'budget',
+  'cashback',
+  'salary',
+  'payments',
+] as const;
 
 export type RemoteName = (typeof REMOTE_NAMES)[number];
 
@@ -9,6 +17,7 @@ export const REMOTE_PORTS: Record<RemoteName, number> = {
   budget: 5004,
   cashback: 5005,
   salary: 5006,
+  payments: 5007,
 };
 
 export const APP_LABELS: Record<RemoteName, string> = {
@@ -18,6 +27,7 @@ export const APP_LABELS: Record<RemoteName, string> = {
   budget: 'Бюджет',
   cashback: 'Кэшбеки',
   salary: 'Salary Flow',
+  payments: 'Мои платежи',
 };
 
 export const APP_DESCRIPTIONS: Record<RemoteName, string> = {
@@ -27,6 +37,7 @@ export const APP_DESCRIPTIONS: Record<RemoteName, string> = {
   budget: 'Учёт расходов семьи',
   cashback: 'Распознавание и учёт кэшбеков',
   salary: 'Визуальный трекер заработка в реальном времени',
+  payments: 'Семейные регулярные и разовые платежи',
 };
 
 function normalizeBasePath(base = '/'): string {

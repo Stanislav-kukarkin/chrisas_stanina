@@ -29,3 +29,8 @@ declare module 'salary/App' {
   const App: React.ComponentType;
   export default App;
 }
+
+declare module 'payments/App' {
+  const App: React.ComponentType;
+  export default App;
+}

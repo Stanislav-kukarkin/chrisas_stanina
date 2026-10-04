@@ -8,8 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -n shell,tasks,shopping,recipes,budget,cashback,salary -c blue,green,yellow,magenta,cyan,red,white \"npm run dev -w @chrisasstanina/shell\" \"npm run dev -w @chrisasstanina/tasks\" \"npm run dev -w @chrisasstanina/shopping\" \"npm run dev -w @chrisasstanina/recipes\" \"npm run dev -w @chrisasstanina/budget\" \"npm run dev -w @chrisasstanina/cashback\" \"npm run dev -w @chrisasstanina/salary\"",
-    "test": "npm run test -w @chrisasstanina/salary-flow-core",
+    "dev": "concurrently -n shell,tasks,shopping,recipes,budget,cashback,salary,payments -c blue,green,yellow,magenta,cyan,red,white,cyan \"npm run dev -w @chrisasstanina/shell\" \"npm run dev -w @chrisasstanina/tasks\" \"npm run dev -w @chrisasstanina/shopping\" \"npm run dev -w @chrisasstanina/recipes\" \"npm run dev -w @chrisasstanina/budget\" \"npm run dev -w @chrisasstanina/cashback\" \"npm run dev -w @chrisasstanina/salary\" \"npm run dev -w @chrisasstanina/payments\"",
+    "test": "npm run test -w @chrisasstanina/salary-flow-core && npm run test -w @chrisasstanina/payments",
     "dev:shell": "npm run dev -w @chrisasstanina/shell",
     "build": "node scripts/build-all.mjs",
     "lint": "eslint .",

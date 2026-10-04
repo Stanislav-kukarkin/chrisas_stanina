@@ -20,6 +20,7 @@ apps/remotes/shopping/
 apps/remotes/recipes/
 apps/remotes/budget/
 apps/remotes/cashback/ — placeholder для Expo Web
+apps/remotes/payments/ — регулярные и разовые семейные платежи
 packages/firebase/    — Firebase init, paths, query hooks
 packages/auth/        — AuthProvider, LoginForm, ProtectedRoute
 packages/shared-federation/ — federation config
@@ -35,7 +36,7 @@ npm install
 cp .env.example .env
 # Заполните Firebase config (см. ниже)
 
-# Dev: shell + все remotes
+# Dev: shell + все remotes, включая «Мои платежи» (:5007)
 npm run dev
 
 # Только shell (remotes должны быть собраны)

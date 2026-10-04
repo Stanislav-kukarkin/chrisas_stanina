@@ -13,7 +13,15 @@ export function createWorkspaceAliases() {
   };
 }
 
-export const REMOTE_NAMES = ['tasks', 'shopping', 'recipes', 'budget', 'cashback', 'salary'];
+export const REMOTE_NAMES = [
+  'tasks',
+  'shopping',
+  'recipes',
+  'budget',
+  'cashback',
+  'salary',
+  'payments',
+];
 
 export const REMOTE_PORTS = {
   tasks: 5001,
@@ -22,6 +30,7 @@ export const REMOTE_PORTS = {
   budget: 5004,
   cashback: 5005,
   salary: 5006,
+  payments: 5007,
 };
 
 export const APP_LABELS = {
@@ -31,6 +40,7 @@ export const APP_LABELS = {
   budget: 'Бюджет',
   cashback: 'Кэшбеки',
   salary: 'Salary Flow',
+  payments: 'Мои платежи',
 };
 
 export const APP_DESCRIPTIONS = {
@@ -40,6 +50,7 @@ export const APP_DESCRIPTIONS = {
   budget: 'Учёт расходов семьи',
   cashback: 'Распознавание и учёт кэшбеков',
   salary: 'Визуальный трекер заработка в реальном времени',
+  payments: 'Семейные регулярные и разовые платежи',
 };
 
 export function normalizeBasePath(base = '/') {

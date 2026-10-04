@@ -12,7 +12,11 @@ export interface AppCard {
 }
 
 /** Приложения, которые показываем на главной (остальные — placeholder). */
-export const VISIBLE_APP_IDS = ['shopping', 'salary'] as const satisfies readonly RemoteName[];
+export const VISIBLE_APP_IDS = [
+  'shopping',
+  'salary',
+  'payments',
+] as const satisfies readonly RemoteName[];
 
 export const APP_CARDS: AppCard[] = VISIBLE_APP_IDS.map((id) => ({
   id,

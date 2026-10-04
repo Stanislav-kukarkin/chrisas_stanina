@@ -42,6 +42,7 @@ const RemoteApps = {
   budget: lazyRemote('budget', () => import('budget/App')),
   cashback: lazyRemote('cashback', () => import('cashback/App')),
   salary: lazyRemote('salary', () => import('salary/App')),
+  payments: lazyRemote('payments', () => import('payments/App')),
 } satisfies Record<RemoteName, LazyExoticComponent<ComponentType>>;
 
 function isRemoteName(value: string | undefined): value is RemoteName {

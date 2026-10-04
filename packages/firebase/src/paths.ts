@@ -1,4 +1,4 @@
-export type FamilyAppName = 'tasks' | 'shopping' | 'recipes' | 'budget' | 'cashback' | 'salary';
+export type FamilyAppName = 'tasks' | 'shopping' | 'recipes' | 'budget' | 'cashback' | 'salary' | 'payments';
 
 export function familyDocPath(familyId: string): string {
   return `families/${familyId}`;
