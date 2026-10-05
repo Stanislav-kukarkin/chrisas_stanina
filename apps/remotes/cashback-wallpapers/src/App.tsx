@@ -513,14 +513,11 @@ function App() {
     setGroups((current) => [...current, { id: crypto.randomUUID(), bankName: '', items: [] }]);
   }
 
-  const shellHome = import.meta.env.DEV ? `${window.location.protocol}//${window.location.hostname}:5173/` : '/';
-
   return (
     <main className="relative min-h-full flex-1 overflow-hidden text-white">
       <Aurora />
       <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-16 pt-7 sm:px-7 lg:px-10">
-        <header className="mb-10 flex items-center justify-between">
-          <a href={shellHome} className="rounded-full border border-white/10 bg-black/25 px-4 py-2 text-sm text-white/70 hover:text-white">← Семейный Hub</a>
+        <header className="mb-10 flex items-center justify-end">
           <div className="text-xs tracking-[.24em] text-teal-300">CASHBACK WALLPAPERS</div>
         </header>
 
