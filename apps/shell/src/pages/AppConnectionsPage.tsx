@@ -174,8 +174,9 @@ export function AppConnectionsPage() {
           <Link to="/connection-requests" className="rounded-xl border border-zinc-700 px-4 py-3 text-sm text-zinc-200 hover:border-zinc-500">
             Запросы
           </Link>
-          <button type="button" onClick={() => { setModalOpen(true); setFormError(''); }} className="rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400">
-            Объединить
+          <button type="button" onClick={() => { setModalOpen(true); setFormError(''); }} className="flex items-center gap-2 rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-400">
+            <span aria-hidden="true" className="text-lg leading-none">+</span>
+            Добавить связь
           </button>
         </div>
       </div>
