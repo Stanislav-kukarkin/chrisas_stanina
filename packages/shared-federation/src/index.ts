@@ -6,6 +6,7 @@ export const REMOTE_NAMES = [
   'cashback',
   'salary',
   'payments',
+  'cashback-wallpapers',
 ] as const;
 
 export type RemoteName = (typeof REMOTE_NAMES)[number];
@@ -18,6 +19,7 @@ export const REMOTE_PORTS: Record<RemoteName, number> = {
   cashback: 5005,
   salary: 5006,
   payments: 5007,
+  'cashback-wallpapers': 5008,
 };
 
 export const APP_LABELS: Record<RemoteName, string> = {
@@ -28,6 +30,7 @@ export const APP_LABELS: Record<RemoteName, string> = {
   cashback: 'Кэшбеки',
   salary: 'Salary Flow',
   payments: 'Мои платежи',
+  'cashback-wallpapers': 'Обои кэшбэков',
 };
 
 export const APP_DESCRIPTIONS: Record<RemoteName, string> = {
@@ -38,6 +41,7 @@ export const APP_DESCRIPTIONS: Record<RemoteName, string> = {
   cashback: 'Распознавание и учёт кэшбеков',
   salary: 'Визуальный трекер заработка в реальном времени',
   payments: 'Семейные регулярные и разовые платежи',
+  'cashback-wallpapers': 'Создание обоев с кешбэками из банковских скриншотов',
 };
 
 function normalizeBasePath(base = '/'): string {

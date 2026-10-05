@@ -16,6 +16,7 @@ export const VISIBLE_APP_IDS = [
   'shopping',
   'salary',
   'payments',
+  'cashback-wallpapers',
 ] as const satisfies readonly RemoteName[];
 
 export const APP_CARDS: AppCard[] = VISIBLE_APP_IDS.map((id) => ({

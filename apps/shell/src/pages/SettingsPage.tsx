@@ -15,6 +15,7 @@ export function SettingsPage() {
     data: profile,
     isLoading: profileLoading,
     isError: profileError,
+    error: profileFetchError,
     refetch,
   } = useUserProfile(user?.uid);
   const updateProfile = useUpdateProfile(getDefaultFamilyId());
@@ -35,9 +36,23 @@ export function SettingsPage() {
   }
 
   if (bootstrap.isError || profileError) {
+    const requestError = bootstrap.error ?? profileFetchError;
     const errorMessage =
-      (bootstrap.error instanceof Error ? bootstrap.error.message : null) ??
+      (requestError instanceof Error ? requestError.message : null) ??
       (profileError ? 'Ошибка чтения профиля из Firestore' : null);
+    const errorCode =
+      requestError && typeof requestError === 'object' && 'code' in requestError
+        ? String(requestError.code)
+        : '';
+    const offline =
+      errorCode === 'unavailable' ||
+      errorMessage?.toLowerCase().includes('client is offline') ||
+      errorMessage?.toLowerCase().includes('network');
+    const guidance = offline
+      ? 'Нет соединения с Firebase. Проверьте интернет, VPN или прокси, затем попробуйте снова.'
+      : errorCode === 'permission-denied'
+        ? 'Доступ запрещён правилами Firestore. Проверьте Firestore Rules в Firebase Console.'
+        : 'Проверьте подключение к Firebase и попробуйте снова.';
 
     return (
       <div className="mx-auto max-w-lg px-4 py-10 text-center">
@@ -45,9 +60,7 @@ export function SettingsPage() {
         {errorMessage ? (
           <p className="mt-2 text-xs text-zinc-600">{errorMessage}</p>
         ) : null}
-        <p className="mt-2 text-sm text-zinc-500">
-          Проверьте Firestore Rules в Firebase Console и попробуйте снова.
-        </p>
+        <p className="mt-2 text-sm text-zinc-500">{guidance}</p>
         <button
           type="button"
           onClick={() => {

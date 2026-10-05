@@ -10,8 +10,36 @@ export {
   isFirebaseReady,
   getFirebaseAuth,
   getFirebaseFirestore,
+  subscribeToFirebaseAuth,
   type FirebaseServices,
 } from './init';
+export {
+  listCashbackWallpapers,
+  saveCashbackWallpaper,
+  deleteCashbackWallpaper,
+  type CashbackWallpaper,
+  type CashbackWallpaperInput,
+  type CashbackWallpaperEntry,
+  type CashbackWallpaperGroup,
+  type CashbackWallpaperAppearance,
+} from './cashback-wallpapers';
+export {
+  SHAREABLE_APP_NAMES,
+  findInvitationTarget,
+  listAppInvitations,
+  sendAppInvitation,
+  respondToAppInvitation,
+  cancelAppInvitation,
+  getFamilyAppRole,
+  migrateLegacyFamilyAccess,
+  leaveLegacyFamily,
+  type ShareableAppName,
+  type AppSharingRole,
+  type AppSharingRoles,
+  type AppInvitation,
+  type AppInvitationStatus,
+  type InvitationTarget,
+} from './app-sharing';
 export { ensureUserBootstrap, computeProfileComplete } from './bootstrap';
 export { BootstrapProvider } from './bootstrap-provider';
 export {
@@ -39,6 +67,7 @@ export {
 } from './hooks/profile/use-user-profile';
 export { useUserBootstrap } from './hooks/profile/use-user-bootstrap';
 export { useFirebaseUser } from './hooks/use-firebase-user';
+export { useFamilyAppAccess } from './hooks/use-family-app-access';
 export { useUpdateProfile } from './hooks/profile/use-update-profile';
 export {
   useFamilyMembers,

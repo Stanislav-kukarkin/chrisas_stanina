@@ -1,5 +1,10 @@
-import { useMemo, useState } from 'react';
-import { getFirebaseConfigFromEnv, initializeFirebase } from '@chrisasstanina/firebase';
+import { useMemo, useRef, useState } from 'react';
+import {
+  getDefaultFamilyId,
+  getFirebaseConfigFromEnv,
+  initializeFirebase,
+  useFamilyAppAccess,
+} from '@chrisasstanina/firebase';
 import { Aurora, BlurText, FadeIn, GlassPanel, ProgressGlow } from '@chrisasstanina/ui';
 import { usePaymentsActions, usePaymentsData } from './lib/repository';
 import { usePaymentsAuth } from './hooks/usePaymentsAuth';
@@ -29,15 +34,17 @@ const emptyCompletions: import('./lib/domain').PaymentCompletion[] = [];
 
 export default function App() {
   const { user, loading: authLoading, firebaseReady } = usePaymentsAuth();
-  const query = usePaymentsData(firebaseReady && !authLoading && Boolean(user));
-  const actions = usePaymentsActions();
+  const familyId = getDefaultFamilyId();
+  const access = useFamilyAppAccess(user?.uid, 'payments', familyId);
+  const query = usePaymentsData(firebaseReady && !authLoading && Boolean(user) && access.canView, familyId);
+  const actions = usePaymentsActions(familyId);
   const [month, setMonth] = useState(monthKey());
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<ModalState | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [undo, setUndo] = useState<{ group: PaymentGroup; paymentIds: string[] } | null>(null);
   const [selectedBanks, setSelectedBanks] = useState<Record<string, string>>({});
-  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const todayKey = monthKey();
   const groups = query.data?.groups ?? emptyGroups;
   const activeGroups = groups.filter((group) => !group.isArchived);
@@ -133,6 +140,7 @@ export default function App() {
   const moneyFmt = (amount: number) => money(amount);
 
   function complete(instance: PaymentInstance) {
+    if (!access.canEdit) return;
     const bankId = selectedBanks[instance.payment.id] || instance.payment.bankId || null;
     actions.completePayment.mutate({
       paymentId: instance.payment.id,
@@ -143,6 +151,7 @@ export default function App() {
     });
   }
   function removeGroup(group: PaymentGroup) {
+    if (!access.canEdit) return;
     const paymentIds = payments
       .filter((payment) => payment.groupId === group.id && !payment.isArchived)
       .map((payment) => payment.id);
@@ -155,13 +164,13 @@ export default function App() {
     setModal(null);
   }
   function doUndo() {
-    if (undo) {
+    if (undo && access.canEdit) {
       actions.restoreGroup.mutate({ id: undo.group.id, paymentIds: undo.paymentIds });
       setUndo(null);
     }
   }
 
-  if (authLoading || query.isLoading)
+  if (authLoading || (user && access.isLoading) || query.isLoading)
     return (
       <div className="relative flex min-h-full flex-1 items-center justify-center overflow-hidden">
         <Aurora />
@@ -194,6 +203,24 @@ export default function App() {
       </main>
     );
   }
+  if (access.isError) {
+    return (
+      <main className="mx-auto max-w-xl p-8 text-center">
+        <p className="text-red-300">Не удалось проверить доступ к платежам.</p>
+        <p className="mt-2 text-sm text-zinc-500">{access.error instanceof Error ? access.error.message : 'Попробуйте обновить страницу.'}</p>
+        <button className="mt-4 text-teal-300" onClick={() => access.refetch()}>Повторить</button>
+      </main>
+    );
+  }
+  if (!access.canView) {
+    return (
+      <main className="mx-auto max-w-xl p-8 text-center">
+        <p className="text-lg font-medium text-zinc-100">Нет доступа к платежам</p>
+        <p className="mt-2 text-sm text-zinc-400">Попросите владельца пригласить вас или настройте доступ в объединении приложений.</p>
+        <a href="/connections" className="mt-5 inline-block rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-teal-200 hover:border-teal-400/60">Объединение приложений</a>
+      </main>
+    );
+  }
   if (query.isError)
     return (
       <main className="mx-auto max-w-xl p-8 text-center">
@@ -208,17 +235,7 @@ export default function App() {
     );
 
   return (
-    <main
-      className="relative flex min-h-full flex-1 flex-col overflow-hidden"
-      onTouchStart={(event) => setTouchStart(event.touches[0]?.clientX ?? null)}
-      onTouchEnd={(event) => {
-        if (touchStart !== null) {
-          const dx = (event.changedTouches[0]?.clientX ?? touchStart) - touchStart;
-          if (Math.abs(dx) > 75) setMonth((current) => addMonth(current, dx < 0 ? 1 : -1));
-        }
-        setTouchStart(null);
-      }}
-    >
+    <main className="relative flex min-h-full flex-1 flex-col overflow-hidden">
       <Aurora />
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-7 sm:px-6 sm:py-10">
         <header className="flex items-center justify-between gap-3">
@@ -233,15 +250,16 @@ export default function App() {
               className="mt-1 text-3xl sm:text-4xl"
             />
           </div>
-          <button
+          {access.canEdit && <button
             type="button"
             onClick={() => setModal({ type: 'settings' })}
             aria-label="Настройки банков"
             className="grid h-11 w-11 place-items-center rounded-xl border border-zinc-700 bg-zinc-900/70 text-lg text-zinc-300 hover:border-teal-400/50"
           >
             ⚙
-          </button>
+          </button>}
         </header>
+        {!access.canEdit && <p className="-mt-2 inline-flex self-start rounded-full bg-amber-400/10 px-3 py-1 text-xs text-amber-200">Доступ только для просмотра</p>}
         <div className="relative">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
             ⌕
@@ -254,70 +272,93 @@ export default function App() {
             aria-label="Поиск платежей"
           />
         </div>
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              aria-label="Предыдущий месяц"
-              onClick={() => setMonth(addMonth(month, -1))}
-              className="rounded-xl px-3 py-2 text-xl text-zinc-400 hover:bg-zinc-800"
-            >
-              ‹
-            </button>
-            <div className="text-center">
-              <h2 className="text-lg font-semibold capitalize text-zinc-100">
-                {monthLabel(month)}
-              </h2>
-              {month !== todayKey && (
-                <button
-                  type="button"
-                  onClick={() => setMonth(todayKey)}
-                  className="mt-0.5 text-xs text-teal-300 hover:text-teal-200"
-                >
-                  Сегодня
-                </button>
-              )}
-            </div>
-            <button
-              type="button"
-              aria-label="Следующий месяц"
-              onClick={() => setMonth(addMonth(month, 1))}
-              className="rounded-xl px-3 py-2 text-xl text-zinc-400 hover:bg-zinc-800"
-            >
-              ›
-            </button>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Stat label="Платежей" value={instances.length} />
-            <Stat label="Оплачено" value={paidCount} tone="teal" />
-            <Stat
-              label="Скоро"
-              value={instances.filter((i) => !i.completion && i.status === 'soon').length}
-              tone="amber"
-            />
-            <Stat
-              label="Просрочено"
-              value={instances.filter((i) => !i.completion && i.status === 'overdue').length}
-              tone="rose"
-            />
-          </div>
-          {instances.length > 0 && (
-            <>
-              <ProgressGlow progress={paidCount / instances.length} className="mt-4" />
-              <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-zinc-400">
-                <span>
-                  Запланировано <b className="text-zinc-200">{moneyFmt(plannedAmount)}</b>
-                </span>
-                <span>
-                  Оплачено <b className="text-teal-200">{moneyFmt(paidAmount)}</b>
-                </span>
-                <span>
-                  Осталось <b className="text-zinc-200">{moneyFmt(plannedAmount - paidAmount)}</b>
-                </span>
+        <div
+          style={{ touchAction: 'pan-y' }}
+          onTouchStart={(event) => {
+            const touch = event.touches[0];
+            touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+          }}
+          onTouchEnd={(event) => {
+            const start = touchStart.current;
+            const touch = event.changedTouches[0];
+            touchStart.current = null;
+            if (!start || !touch) return;
+
+            const dx = touch.clientX - start.x;
+            const dy = touch.clientY - start.y;
+            if (Math.abs(dx) > 75 && Math.abs(dx) > Math.abs(dy)) {
+              setMonth((current) => addMonth(current, dx < 0 ? 1 : -1));
+            }
+          }}
+          onTouchCancel={() => {
+            touchStart.current = null;
+          }}
+        >
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                aria-label="Предыдущий месяц"
+                onClick={() => setMonth(addMonth(month, -1))}
+                className="rounded-xl px-3 py-2 text-xl text-zinc-400 hover:bg-zinc-800"
+              >
+                ‹
+              </button>
+              <div className="text-center">
+                <h2 className="text-lg font-semibold capitalize text-zinc-100">
+                  {monthLabel(month)}
+                </h2>
+                {month !== todayKey && (
+                  <button
+                    type="button"
+                    onClick={() => setMonth(todayKey)}
+                    className="mt-0.5 text-xs text-teal-300 hover:text-teal-200"
+                  >
+                    Сегодня
+                  </button>
+                )}
               </div>
-            </>
-          )}
-        </GlassPanel>
+              <button
+                type="button"
+                aria-label="Следующий месяц"
+                onClick={() => setMonth(addMonth(month, 1))}
+                className="rounded-xl px-3 py-2 text-xl text-zinc-400 hover:bg-zinc-800"
+              >
+                ›
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Stat label="Платежей" value={instances.length} />
+              <Stat label="Оплачено" value={paidCount} tone="teal" />
+              <Stat
+                label="Скоро"
+                value={instances.filter((i) => !i.completion && i.status === 'soon').length}
+                tone="amber"
+              />
+              <Stat
+                label="Просрочено"
+                value={instances.filter((i) => !i.completion && i.status === 'overdue').length}
+                tone="rose"
+              />
+            </div>
+            {instances.length > 0 && (
+              <>
+                <ProgressGlow progress={paidCount / instances.length} className="mt-4" />
+                <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-zinc-400">
+                  <span>
+                    Запланировано <b className="text-zinc-200">{moneyFmt(plannedAmount)}</b>
+                  </span>
+                  <span>
+                    Оплачено <b className="text-teal-200">{moneyFmt(paidAmount)}</b>
+                  </span>
+                  <span>
+                    Осталось <b className="text-zinc-200">{moneyFmt(plannedAmount - paidAmount)}</b>
+                  </span>
+                </div>
+              </>
+            )}
+          </GlassPanel>
+        </div>
         <div className="space-y-4">
           {groupRows.map(({ group, active, paid }, index) => (
             <FadeIn key={group.id} index={index}>
@@ -337,7 +378,7 @@ export default function App() {
                       </p>
                     </div>
                   </div>
-                  <details className="relative">
+                  {access.canEdit && <details className="relative">
                     <summary
                       className="cursor-pointer list-none rounded-lg px-3 py-2 text-xl text-zinc-400 hover:bg-zinc-800"
                       aria-label="Действия группы"
@@ -358,7 +399,7 @@ export default function App() {
                         Удалить группу
                       </button>
                     </div>
-                  </details>
+                  </details>}
                 </div>
                 <div className="mt-4 space-y-2">
                   {active.map((instance) => (
@@ -379,6 +420,7 @@ export default function App() {
                       onDelete={() =>
                         setModal({ type: 'delete-payment', payment: instance.payment })
                       }
+                      readOnly={!access.canEdit}
                     />
                   ))}
                 </div>
@@ -419,19 +461,20 @@ export default function App() {
                                 payment: instance.payment,
                               })
                             }
+                            readOnly={!access.canEdit}
                           />
                         ))}
                       </div>
                     )}
                   </div>
                 )}
-                <button
+                {access.canEdit && <button
                   type="button"
                   onClick={() => setModal({ type: 'payment', groupId: group.id })}
                   className="mt-4 w-full rounded-xl border border-dashed border-zinc-700 py-3 text-sm text-zinc-400 transition hover:border-teal-400/50 hover:text-teal-200"
                 >
                   ＋ Добавить платеж
-                </button>
+                </button>}
               </GlassPanel>
             </FadeIn>
           ))}
@@ -477,20 +520,20 @@ export default function App() {
             </details>
           </GlassPanel>
         )}
-        <button
+        {access.canEdit && <button
           type="button"
           onClick={() => setModal({ type: 'group' })}
           className="self-center rounded-2xl bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-white"
         >
           ＋ Добавить группу
-        </button>
+        </button>}
         {user?.email && (
           <p className="pb-4 text-center text-xs text-zinc-600">
             Данные доступны участникам вашей семьи
           </p>
         )}
       </div>
-      {undo && (
+      {undo && access.canEdit && (
         <div className="fixed inset-x-3 bottom-4 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 shadow-xl">
           <span className="text-sm text-zinc-200">Группа «{undo.group.name}» удалена</span>
           <button onClick={doUndo} className="text-sm font-semibold text-teal-300">
@@ -498,7 +541,7 @@ export default function App() {
           </button>
         </div>
       )}
-      {modal && (
+      {modal && access.canEdit && (
         <Dialog
           state={modal}
           onClose={() => setModal(null)}

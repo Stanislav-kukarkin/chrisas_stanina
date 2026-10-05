@@ -3,12 +3,13 @@ import { useParams } from 'react-router-dom';
 import { APP_LABELS, REMOTE_NAMES, type RemoteName } from '@chrisasstanina/shared-federation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-function RemoteLoadError({ appName }: { appName: RemoteName }) {
+function RemoteLoadError({ appName, error }: { appName: RemoteName; error: string }) {
   return (
     <div className="mx-auto max-w-lg px-4 py-16 text-center">
       <p className="text-red-400">Не удалось загрузить {APP_LABELS[appName]}.</p>
-      <p className="mt-2 text-sm text-zinc-500">
-        Перезапустите <code className="text-zinc-400">npm run dev</code> и обновите страницу.
+      <p className="mt-2 text-sm text-zinc-500">Причина: {error}</p>
+      <p className="mt-1 text-xs text-zinc-600">
+        Проверьте, что dev-сервер этого приложения запущен, затем попробуйте обновить страницу.
       </p>
       <button
         type="button"
@@ -28,8 +29,9 @@ function lazyRemote(
   return lazy(() =>
     loader().catch((error: unknown) => {
       console.error(`[remote:${appName}]`, error);
+      const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
       return {
-        default: () => <RemoteLoadError appName={appName} />,
+        default: () => <RemoteLoadError appName={appName} error={message} />,
       };
     }),
   );
@@ -43,6 +45,7 @@ const RemoteApps = {
   cashback: lazyRemote('cashback', () => import('cashback/App')),
   salary: lazyRemote('salary', () => import('salary/App')),
   payments: lazyRemote('payments', () => import('payments/App')),
+  'cashback-wallpapers': lazyRemote('cashback-wallpapers', () => import('cashback-wallpapers/App')),
 } satisfies Record<RemoteName, LazyExoticComponent<ComponentType>>;
 
 function isRemoteName(value: string | undefined): value is RemoteName {

@@ -10,6 +10,9 @@ export const queryKeys = {
     [...queryKeys.familyApp(familyId, appName), 'doc', docId] as const,
   userProfile: (uid: string) => ['userProfile', uid] as const,
   familyMembers: (familyId: string) => [...queryKeys.family(familyId), 'members'] as const,
+  familyAppAccess: (familyId: string, appName: FamilyAppName, uid: string) =>
+    [...queryKeys.familyApp(familyId, appName), 'access', uid] as const,
+  appInvitations: (uid: string) => ['appInvitations', uid] as const,
   shoppingItems: (familyId: string) =>
     [...queryKeys.familyApp(familyId, 'shopping'), 'items'] as const,
   shoppingFavorites: (familyId: string) =>

@@ -9,7 +9,7 @@ const rootDir = resolve(__dirname, '..');
 const shellDir = join(rootDir, 'apps/shell');
 const remotesPublicDir = join(shellDir, 'public/remotes');
 
-const REMOTES = ['tasks', 'shopping', 'recipes', 'budget', 'cashback', 'salary', 'payments'];
+const REMOTES = ['tasks', 'shopping', 'recipes', 'budget', 'cashback', 'salary', 'payments', 'cashback-wallpapers'];
 
 function run(command) {
   execSync(command, { cwd: rootDir, stdio: 'inherit' });

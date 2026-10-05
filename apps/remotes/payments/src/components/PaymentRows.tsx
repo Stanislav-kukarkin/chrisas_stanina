@@ -32,6 +32,7 @@ export function PaymentRow({
   onComplete,
   onEdit,
   onDelete,
+  readOnly = false,
 }: {
   instance: PaymentInstance;
   banks: PaymentBank[];
@@ -40,6 +41,7 @@ export function PaymentRow({
   onComplete: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  readOnly?: boolean;
 }) {
   const { payment, date, status, daysUntil } = instance;
   const statusLabel =
@@ -76,7 +78,7 @@ export function PaymentRow({
             )}
           </p>
         </div>
-        <details className="relative">
+        {!readOnly && <details className="relative">
           <summary className="list-none cursor-pointer px-1.5 text-lg text-zinc-500">⋯</summary>
           <div className="absolute right-0 top-7 z-20 min-w-32 rounded-xl border border-zinc-700 bg-zinc-900 p-1">
             <button
@@ -92,9 +94,13 @@ export function PaymentRow({
               Удалить
             </button>
           </div>
-        </details>
+        </details>}
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+      {readOnly ? (
+        <p className="mt-3 pl-4 text-xs text-zinc-500">
+          {banks.find((bank) => bank.id === (selectedBank || payment.bankId))?.name ?? 'Банк не выбран'}
+        </p>
+      ) : <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <SelectControl
           aria-label={`Банк оплаты ${payment.name}`}
           value={selectedBank}
@@ -119,7 +125,7 @@ export function PaymentRow({
         >
           ✓ Оплачено
         </button>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -129,12 +135,14 @@ export function PaidRow({
   onBank,
   onUndo,
   onEdit,
+  readOnly = false,
 }: {
   instance: PaymentInstance;
   banks: PaymentBank[];
   onBank: (id: string) => void;
   onUndo: () => void;
   onEdit: () => void;
+  readOnly?: boolean;
 }) {
   const completion = instance.completion!;
   const bank = banks.find((entry) => entry.id === completion.bankId);
@@ -154,7 +162,7 @@ export function PaidRow({
             : 'банк не указан'}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
+      {!readOnly && <div className="flex shrink-0 items-center gap-1">
         <SelectControl
           title="Изменить банк оплаты"
           aria-label="Банк фактической оплаты"
@@ -185,7 +193,7 @@ export function PaidRow({
         >
           ↩
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

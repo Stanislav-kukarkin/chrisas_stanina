@@ -18,11 +18,13 @@ function mapFamilyMember(id: string, data: Record<string, unknown>): FamilyMembe
     uid: String(data.uid ?? id),
     email: String(data.email ?? ''),
     role: data.role === 'admin' ? 'admin' : 'member',
+    source: data.source === 'legacy' || data.source === 'invitation' ? data.source : undefined,
+    accessVersion: typeof data.accessVersion === 'number' ? data.accessVersion : undefined,
     joinedAt: mapTimestamp(data.joinedAt),
   };
 }
 
-export function useFamilyMembers(familyId: string = getDefaultFamilyId()) {
+export function useFamilyMembers(familyId: string = getDefaultFamilyId(), enabled = true) {
   return useQuery({
     queryKey: queryKeys.familyMembers(familyId),
     queryFn: async (): Promise<FamilyMemberWithProfile[]> => {
@@ -44,5 +46,6 @@ export function useFamilyMembers(familyId: string = getDefaultFamilyId()) {
         (a.profile?.displayName ?? a.email).localeCompare(b.profile?.displayName ?? b.email, 'ru'),
       );
     },
+    enabled,
   });
 }

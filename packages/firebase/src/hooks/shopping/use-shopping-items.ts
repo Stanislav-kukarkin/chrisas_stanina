@@ -34,9 +34,10 @@ function sortItems(items: ShoppingItem[]): ShoppingItem[] {
   });
 }
 
-export function useShoppingItems(familyId: string = getDefaultFamilyId()) {
+export function useShoppingItems(familyId: string = getDefaultFamilyId(), enabled = true) {
   return useQuery({
     queryKey: queryKeys.shoppingItems(familyId),
+    enabled,
     queryFn: async (): Promise<ShoppingItem[]> => {
       const firestore = getFirebaseFirestore();
       const snapshot = await getDocs(collection(firestore, shoppingItemsCollectionPath(familyId)));

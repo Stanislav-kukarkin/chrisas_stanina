@@ -18,6 +18,7 @@ interface ShoppingItemRowProps {
   onUpdate: (itemId: string, update: ShoppingItemUpdate) => void;
   onDelete: (itemId: string) => void;
   onAddFavorite: (item: ShoppingItem) => void;
+  readOnly?: boolean;
 }
 
 export function ShoppingItemRow({
@@ -30,6 +31,7 @@ export function ShoppingItemRow({
   onUpdate,
   onDelete,
   onAddFavorite,
+  readOnly = false,
 }: ShoppingItemRowProps) {
   const expandedItemId = useShoppingUiStore((state) => state.expandedItemId);
   const toggleExpandedItem = useShoppingUiStore((state) => state.toggleExpandedItem);
@@ -50,7 +52,17 @@ export function ShoppingItemRow({
     <GlassPanel animated={false} className="border-zinc-800/90 bg-zinc-900/50">
       <div className="px-3 py-3 sm:px-4">
         <div className="flex items-center gap-2 sm:gap-3">
-          <SpringCheck
+          {readOnly ? (
+            <span className="flex min-w-0 flex-1 items-center gap-3 text-zinc-100">
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border ${item.checked ? 'border-violet-400 bg-violet-500 text-white' : 'border-zinc-600 bg-zinc-950'}`} aria-hidden>
+                {item.checked ? '✓' : ''}
+              </span>
+              <span className={`min-w-0 truncate ${item.checked ? 'text-zinc-500 line-through' : ''}`}>
+                {item.important && <span className="mr-1 text-amber-400">★</span>}
+                {item.name}
+              </span>
+            </span>
+          ) : <SpringCheck
             checked={item.checked}
             onChange={(checked) => onToggle(item.id, checked)}
             label={
@@ -71,7 +83,7 @@ export function ShoppingItemRow({
             doneOpacity={0.58}
             strike="left"
             className="min-w-0 flex-1"
-          />
+          />}
           <button
             type="button"
             onClick={() => toggleExpandedItem(item.id)}
@@ -81,7 +93,7 @@ export function ShoppingItemRow({
             {item.quantity} {item.unit}
           </button>
           <span className="hidden shrink-0 sm:inline-flex">{creatorBadge}</span>
-          <button
+          {!readOnly && <button
             type="button"
             onClick={() => onDelete(item.id)}
             className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"
@@ -101,7 +113,7 @@ export function ShoppingItemRow({
                 clipRule="evenodd"
               />
             </svg>
-          </button>
+          </button>}
         </div>
         <div className="mt-1.5 pl-10 sm:hidden">{creatorBadge}</div>
       </div>
@@ -115,6 +127,7 @@ export function ShoppingItemRow({
                 type="number"
                 min={1}
                 value={item.quantity}
+                disabled={readOnly}
                 onChange={(event) =>
                   onUpdate(item.id, { quantity: Number(event.target.value) || 1 })
                 }
@@ -125,6 +138,7 @@ export function ShoppingItemRow({
               <span className="mb-1 block text-zinc-400">Единица</span>
               <select
                 value={item.unit}
+                disabled={readOnly}
                 onChange={(event) =>
                   onUpdate(item.id, { unit: event.target.value as ShoppingItem['unit'] })
                 }
@@ -143,6 +157,7 @@ export function ShoppingItemRow({
             <span className="mb-1 block text-zinc-400">Категория</span>
             <select
               value={item.category ?? ''}
+              disabled={readOnly}
               onChange={(event) =>
                 onUpdate(item.id, { category: event.target.value || undefined })
               }
@@ -161,6 +176,7 @@ export function ShoppingItemRow({
             <span className="mb-1 block text-zinc-400">Заметка</span>
             <input
               value={item.note ?? ''}
+              disabled={readOnly}
               onChange={(event) => onUpdate(item.id, { note: event.target.value || undefined })}
               placeholder="Не жирный, если нет — не брать"
               className="w-full rounded-lg border border-zinc-700 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-violet-500"
@@ -171,6 +187,7 @@ export function ShoppingItemRow({
             <span className="mb-1 block text-zinc-400">Кто купит</span>
             <select
               value={item.assigneeUid ?? ''}
+              disabled={readOnly}
               onChange={(event) =>
                 onUpdate(item.id, { assigneeUid: event.target.value || undefined })
               }
@@ -189,13 +206,14 @@ export function ShoppingItemRow({
             <span className="mb-1 block text-zinc-400">Магазин</span>
             <input
               value={item.store ?? ''}
+              disabled={readOnly}
               onChange={(event) => onUpdate(item.id, { store: event.target.value || undefined })}
               placeholder="Пятёрочка, Ашан..."
               className="w-full rounded-lg border border-zinc-700 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-violet-500"
             />
           </label>
 
-          <div className="flex flex-wrap gap-2">
+          {!readOnly && <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => onUpdate(item.id, { important: !item.important })}
@@ -221,7 +239,7 @@ export function ShoppingItemRow({
             >
               Удалить
             </button>
-          </div>
+          </div>}
         </div>
       )}
     </GlassPanel>

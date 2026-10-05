@@ -53,7 +53,7 @@ export function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-lg">
+        <div className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-lg">
           <button
             type="button"
             onClick={() => {
@@ -63,6 +63,16 @@ export function ProfileDropdown({ onLogout }: ProfileDropdownProps) {
             className="block w-full px-4 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-zinc-900"
           >
             Профиль
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate('/connections');
+            }}
+            className="block w-full border-t border-zinc-800 px-4 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-zinc-900"
+          >
+            Объединение приложений
           </button>
           <button
             type="button"

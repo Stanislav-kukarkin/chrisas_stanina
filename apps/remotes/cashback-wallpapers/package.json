@@ -1,0 +1,32 @@
+{
+  "name": "@chrisasstanina/cashback-wallpapers",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --mode development && npx concurrently -n watch,serve \"vite build --watch --mode development\" \"vite preview --mode development --port 5008 --strictPort\"",
+    "build": "vite build",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@chrisasstanina/firebase": "*",
+    "@chrisasstanina/shared-federation": "*",
+    "@chrisasstanina/ui": "*",
+    "libheif-js": "^1.23.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "@chrisasstanina/tsconfig": "*",
+    "@originjs/vite-plugin-federation": "^1.4.1",
+    "@tailwindcss/vite": "^4.1.16",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  }
+}

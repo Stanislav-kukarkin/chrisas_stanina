@@ -7,9 +7,10 @@ import { queryKeys } from '../../query-keys';
 import { type ShoppingFavoriteInput } from '../../types/shopping';
 import { mapShoppingFavorite } from './shopping-mappers';
 
-export function useShoppingFavorites(familyId: string = getDefaultFamilyId()) {
+export function useShoppingFavorites(familyId: string = getDefaultFamilyId(), enabled = true) {
   return useQuery({
     queryKey: queryKeys.shoppingFavorites(familyId),
+    enabled,
     queryFn: async () => {
       const firestore = getFirebaseFirestore();
       const snapshot = await getDocs(

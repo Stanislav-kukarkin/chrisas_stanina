@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import {
   getFirebaseConfigFromEnv,
+  getDefaultFamilyId,
   initializeFirebase,
+  useFamilyAppAccess,
   useAddShoppingFavorite,
   useAddShoppingItem,
   useClearCheckedItems,
@@ -26,16 +28,18 @@ initializeFirebase(getFirebaseConfigFromEnv());
 
 export default function App() {
   const user = useFirebaseUser();
-  const { data: items = [], isLoading, isError, refetch } = useShoppingItems();
-  const { data: favorites = [] } = useShoppingFavorites();
-  const { data: members = [] } = useFamilyMembers();
+  const familyId = getDefaultFamilyId();
+  const access = useFamilyAppAccess(user?.uid, 'shopping', familyId);
+  const { data: items = [], isLoading, isError, refetch } = useShoppingItems(familyId, access.canView);
+  const { data: favorites = [] } = useShoppingFavorites(familyId, access.canView);
+  const { data: members = [] } = useFamilyMembers(familyId, access.canView);
 
-  const addItem = useAddShoppingItem();
-  const updateItem = useUpdateShoppingItem();
-  const toggleItem = useToggleShoppingItem();
-  const deleteItem = useDeleteShoppingItem();
-  const clearChecked = useClearCheckedItems();
-  const addFavorite = useAddShoppingFavorite();
+  const addItem = useAddShoppingItem(familyId);
+  const updateItem = useUpdateShoppingItem(familyId);
+  const toggleItem = useToggleShoppingItem(familyId);
+  const deleteItem = useDeleteShoppingItem(familyId);
+  const clearChecked = useClearCheckedItems(familyId);
+  const addFavorite = useAddShoppingFavorite(familyId);
 
   const activeItems = items.filter((item) => !item.checked);
   const checkedItems = items.filter((item) => item.checked);
@@ -53,14 +57,14 @@ export default function App() {
   }, [members]);
 
   async function handleQuickAdd(name: string) {
-    if (!user) {
+    if (!user || !access.canEdit) {
       return;
     }
     await addItem.mutateAsync({ input: { name }, createdBy: user.uid });
   }
 
   async function handleFavoriteAdd(favorite: ShoppingFavorite) {
-    if (!user) {
+    if (!user || !access.canEdit) {
       return;
     }
     await addItem.mutateAsync({
@@ -76,18 +80,22 @@ export default function App() {
   }
 
   async function handleUpdate(itemId: string, update: ShoppingItemUpdate) {
+    if (!access.canEdit) return;
     await updateItem.mutateAsync({ itemId, update });
   }
 
   async function handleToggle(itemId: string, checked: boolean) {
+    if (!access.canEdit) return;
     await toggleItem.mutateAsync({ itemId, checked });
   }
 
   async function handleDelete(itemId: string) {
+    if (!access.canEdit) return;
     await deleteItem.mutateAsync(itemId);
   }
 
   async function handleAddFavorite(item: ShoppingItem) {
+    if (!access.canEdit) return;
     const exists = favorites.some(
       (favorite) => favorite.name.toLowerCase() === item.name.toLowerCase(),
     );
@@ -104,6 +112,7 @@ export default function App() {
   }
 
   async function handleClearChecked() {
+    if (!access.canEdit) return;
     await clearChecked.mutateAsync(checkedItems.map((item) => item.id));
   }
 
@@ -126,8 +135,23 @@ export default function App() {
           onUpdate={handleUpdate}
           onDelete={handleDelete}
           onAddFavorite={handleAddFavorite}
+          readOnly={!access.canEdit}
         />
       </FadeIn>
+    );
+  }
+
+  if (!user || access.isLoading) {
+    return <main className="mx-auto w-full max-w-xl px-4 py-12 text-center text-zinc-400">Проверяем доступ к списку покупок…</main>;
+  }
+
+  if (!access.canView) {
+    return (
+      <main className="mx-auto w-full max-w-xl px-4 py-12 text-center">
+        <p className="text-lg font-medium text-zinc-100">Нет доступа к списку покупок</p>
+        <p className="mt-2 text-sm text-zinc-400">Попросите владельца пригласить вас или настройте доступ в разделе объединения приложений.</p>
+        <a href="/connections" className="mt-5 inline-block rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-violet-200 hover:border-violet-400/60">Объединение приложений</a>
+      </main>
     );
   }
 
@@ -142,19 +166,21 @@ export default function App() {
             className="mt-3 text-3xl font-bold tracking-tight text-zinc-100 sm:text-4xl"
           />
           <p className="mt-4 text-zinc-400">Общий список семьи — добавляйте, отмечайте, делитесь</p>
+          {!access.canEdit && <p className="mt-2 inline-flex rounded-full bg-amber-400/10 px-3 py-1 text-xs text-amber-200">Доступ только для просмотра</p>}
         </div>
 
         <GlassPanel className="mt-10 p-4 sm:p-5" index={0}>
-          <QuickAddBar onAdd={handleQuickAdd} disabled={!user || addItem.isPending} />
+          {access.canEdit && <QuickAddBar onAdd={handleQuickAdd} disabled={!user || addItem.isPending} />}
         </GlassPanel>
 
         <GlassPanel className="mt-4 p-4 sm:p-5" index={1}>
           <h2 className="mb-3 text-sm font-medium text-zinc-400">Избранное</h2>
-          <FavoritesRow
+          {access.canEdit && <FavoritesRow
             favorites={favorites}
             onAdd={handleFavoriteAdd}
             disabled={!user || addItem.isPending}
-          />
+          />}
+          {!access.canEdit && <p className="text-sm text-zinc-500">Избранное скрыто в режиме просмотра.</p>}
         </GlassPanel>
 
         {isLoading && (
@@ -196,14 +222,14 @@ export default function App() {
               <h2 className="text-sm font-medium tracking-wide text-zinc-400">
                 Куплено · {checkedItems.length}
               </h2>
-              <button
+              {access.canEdit && <button
                 type="button"
                 onClick={handleClearChecked}
                 disabled={clearChecked.isPending}
                 className="text-sm text-zinc-500 transition hover:text-violet-400 disabled:opacity-50"
               >
                 Очистить купленное
-              </button>
+              </button>}
             </div>
             <div className="space-y-2">{checkedItems.map(renderItemRow)}</div>
           </section>

@@ -34,3 +34,8 @@ declare module 'payments/App' {
   const App: React.ComponentType;
   export default App;
 }
+
+declare module 'cashback-wallpapers/App' {
+  const App: React.ComponentType;
+  export default App;
+}

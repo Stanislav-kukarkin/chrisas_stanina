@@ -25,20 +25,22 @@ import type {
 } from './domain';
 import { completionId, localDateIso } from './domain';
 
-const familyId = getDefaultFamilyId();
-const base = familyAppCollectionPath(familyId, 'payments');
-const paths = {
-  groups: `${base}/groups`,
-  payments: `${base}/payments`,
-  completions: `${base}/completions`,
-  settings: `${base}/settings/global`,
-};
-const key = ['payments', familyId];
+function pathsFor(familyId: string) {
+  const base = familyAppCollectionPath(familyId, 'payments');
+  return {
+    groups: `${base}/groups`,
+    payments: `${base}/payments`,
+    completions: `${base}/completions`,
+    settings: `${base}/settings/global`,
+  };
+}
+const queryKeyFor = (familyId: string) => ['payments', familyId];
 const db = () => getFirebaseFirestore();
 function rows<T extends { id: string }>(snap: Awaited<ReturnType<typeof getDocs>>) {
   return snap.docs.map((row) => ({ id: row.id, ...(row.data() as Record<string, unknown>) }) as T);
 }
-async function fetchAll() {
+async function fetchAll(familyId: string) {
+  const paths = pathsFor(familyId);
   const [groups, payments, completions, settingsDoc] = await Promise.all([
     getDocs(collection(db(), paths.groups)),
     getDocs(collection(db(), paths.payments)),
@@ -59,20 +61,23 @@ async function fetchAll() {
 async function mutateAndRefresh<T>(
   fn: () => Promise<T>,
   client: ReturnType<typeof useQueryClient>,
+  familyId: string,
 ) {
   const out = await fn();
-  await client.invalidateQueries({ queryKey: key });
+  await client.invalidateQueries({ queryKey: queryKeyFor(familyId) });
   return out;
 }
-export function usePaymentsData(enabled = true) {
-  return useQuery({ queryKey: key, queryFn: fetchAll, enabled });
+export function usePaymentsData(enabled = true, familyId = getDefaultFamilyId()) {
+  return useQuery({ queryKey: queryKeyFor(familyId), queryFn: () => fetchAll(familyId), enabled });
 }
-export function usePaymentsActions() {
+export function usePaymentsActions(familyId = getDefaultFamilyId()) {
   const client = useQueryClient();
+  const paths = pathsFor(familyId);
+  const run = (fn: () => Promise<unknown>) => mutateAndRefresh(fn, client, familyId);
   return {
     createGroup: useMutation({
       mutationFn: (data: Omit<PaymentGroup, 'id' | 'isArchived' | 'createdOn'>) =>
-        mutateAndRefresh(async () => {
+        run(async () => {
           await addDoc(collection(db(), paths.groups), {
             ...data,
             isArchived: false,
@@ -80,18 +85,17 @@ export function usePaymentsActions() {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
-        }, client),
+        }),
     }),
     updateGroup: useMutation({
       mutationFn: ({ id, ...data }: Partial<PaymentGroup> & { id: string }) =>
-        mutateAndRefresh(
+        run(
           () => updateDoc(doc(db(), paths.groups, id), { ...data, updatedAt: serverTimestamp() }),
-          client,
         ),
     }),
     archiveGroup: useMutation({
       mutationFn: (id: string) =>
-        mutateAndRefresh(async () => {
+        run(async () => {
           const batch = writeBatch(db());
           batch.update(doc(db(), paths.groups, id), {
             isArchived: true,
@@ -104,11 +108,11 @@ export function usePaymentsActions() {
               batch.update(p.ref, { isArchived: true, updatedAt: serverTimestamp() }),
             );
           await batch.commit();
-        }, client),
+        }),
     }),
     restoreGroup: useMutation({
       mutationFn: ({ id, paymentIds }: { id: string; paymentIds: string[] }) =>
-        mutateAndRefresh(async () => {
+        run(async () => {
           const batch = writeBatch(db());
           batch.update(doc(db(), paths.groups, id), {
             isArchived: false,
@@ -121,11 +125,11 @@ export function usePaymentsActions() {
             }),
           );
           await batch.commit();
-        }, client),
+        }),
     }),
     createPayment: useMutation({
       mutationFn: (data: Omit<Payment, 'id' | 'isArchived' | 'createdOn'>) =>
-        mutateAndRefresh(async () => {
+        run(async () => {
           await addDoc(collection(db(), paths.payments), {
             ...data,
             isArchived: false,
@@ -133,24 +137,22 @@ export function usePaymentsActions() {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
-        }, client),
+        }),
     }),
     updatePayment: useMutation({
       mutationFn: ({ id, ...data }: Partial<Payment> & { id: string }) =>
-        mutateAndRefresh(
+        run(
           () => updateDoc(doc(db(), paths.payments, id), { ...data, updatedAt: serverTimestamp() }),
-          client,
         ),
     }),
     archivePayment: useMutation({
       mutationFn: (id: string) =>
-        mutateAndRefresh(
+        run(
           () =>
             updateDoc(doc(db(), paths.payments, id), {
               isArchived: true,
               updatedAt: serverTimestamp(),
             }),
-          client,
         ),
     }),
     completePayment: useMutation({
@@ -167,7 +169,7 @@ export function usePaymentsActions() {
         bankId: string | null;
         scheduledDate: string;
       }) =>
-        mutateAndRefresh(async () => {
+        run(async () => {
           const [year, monthNumber] = month.split('-').map(Number);
           const id = completionId(paymentId, month);
           await setDoc(doc(db(), paths.completions, id), {
@@ -180,26 +182,25 @@ export function usePaymentsActions() {
             bankId,
             createdAt: serverTimestamp(),
           });
-        }, client),
+        }),
     }),
     undoCompletion: useMutation({
       mutationFn: (id: string) =>
-        mutateAndRefresh(() => deleteDoc(doc(db(), paths.completions, id)), client),
+        run(() => deleteDoc(doc(db(), paths.completions, id))),
     }),
     updateCompletionBank: useMutation({
       mutationFn: ({ id, bankId }: { id: string; bankId: string | null }) =>
-        mutateAndRefresh(() => updateDoc(doc(db(), paths.completions, id), { bankId }), client),
+        run(() => updateDoc(doc(db(), paths.completions, id), { bankId })),
     }),
     saveSettings: useMutation({
       mutationFn: (settings: PaymentSettings) =>
-        mutateAndRefresh(
+        run(
           () =>
             setDoc(
               doc(db(), paths.settings),
               { ...settings, updatedAt: serverTimestamp() },
               { merge: true },
             ),
-          client,
         ),
     }),
   };

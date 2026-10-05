@@ -21,6 +21,7 @@ export const REMOTE_NAMES = [
   'cashback',
   'salary',
   'payments',
+  'cashback-wallpapers',
 ];
 
 export const REMOTE_PORTS = {
@@ -31,6 +32,7 @@ export const REMOTE_PORTS = {
   cashback: 5005,
   salary: 5006,
   payments: 5007,
+  'cashback-wallpapers': 5008,
 };
 
 export const APP_LABELS = {
@@ -41,6 +43,7 @@ export const APP_LABELS = {
   cashback: 'Кэшбеки',
   salary: 'Salary Flow',
   payments: 'Мои платежи',
+  'cashback-wallpapers': 'Обои кэшбэков',
 };
 
 export const APP_DESCRIPTIONS = {
@@ -51,6 +54,7 @@ export const APP_DESCRIPTIONS = {
   cashback: 'Распознавание и учёт кэшбеков',
   salary: 'Визуальный трекер заработка в реальном времени',
   payments: 'Семейные регулярные и разовые платежи',
+  'cashback-wallpapers': 'Создание обоев с кешбэками из банковских скриншотов',
 };
 
 export function normalizeBasePath(base = '/') {

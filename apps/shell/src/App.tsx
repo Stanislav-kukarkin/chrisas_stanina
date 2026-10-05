@@ -5,6 +5,8 @@ import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RemoteAppPage } from '@/pages/RemoteAppPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { AppConnectionsPage } from '@/pages/AppConnectionsPage';
+import { AppConnectionRequestsPage } from '@/pages/AppConnectionRequestsPage';
 
 export default function App() {
   return (
@@ -12,6 +14,22 @@ export default function App() {
       <Route element={<ShellLayout />}>
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
+        <Route
+          path="connections"
+          element={
+            <ProtectedRoute>
+              <AppConnectionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="connection-requests"
+          element={
+            <ProtectedRoute>
+              <AppConnectionRequestsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="settings"
           element={

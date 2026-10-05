@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getMissingFirebaseEnvKeys, isFirebaseConfigured, type FirebaseConfig } from './config';
 
@@ -60,6 +60,10 @@ export function getFirebaseAuth(): Auth {
     throw new Error('Firebase not initialized. Call initializeFirebase first.');
   }
   return auth!;
+}
+
+export function subscribeToFirebaseAuth(callback: (user: User | null) => void) {
+  return onAuthStateChanged(getFirebaseAuth(), callback);
 }
 
 export function getFirebaseFirestore(): Firestore {
