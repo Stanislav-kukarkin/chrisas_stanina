@@ -14,7 +14,7 @@ import { getDefaultFamilyId } from './config';
 import { getFirebaseFirestore } from './init';
 import { familyMemberPath, familyMembersCollectionPath } from './paths';
 
-export const SHAREABLE_APP_NAMES = ['shopping', 'payments'] as const;
+export const SHAREABLE_APP_NAMES = ['tasks', 'shopping', 'payments'] as const;
 export type ShareableAppName = (typeof SHAREABLE_APP_NAMES)[number];
 export type AppSharingRole = 'view' | 'edit';
 export type AppInvitationStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'revoked';
@@ -261,23 +261,31 @@ export async function migrateLegacyFamilyAccess(
 ): Promise<boolean> {
   const firestore = db();
   const memberSnapshot = await getDoc(doc(firestore, familyMemberPath(familyId, currentUid)));
-  if (!memberSnapshot.exists() || memberSnapshot.data().accessVersion !== undefined) return false;
+  if (!memberSnapshot.exists()) return false;
+  const currentMember = memberSnapshot.data();
+  const canMigrateLegacy = currentMember.accessVersion === undefined || currentMember.source === 'legacy';
+  if (!canMigrateLegacy) return false;
 
   const membersSnapshot = await getDocs(collection(firestore, familyMembersCollectionPath(familyId)));
-  const legacyMembers = membersSnapshot.docs.filter((member) => member.data().accessVersion === undefined);
-  const references = legacyMembers.flatMap((member) => [
-    doc(firestore, familyAccessPath(familyId, 'shopping', member.id)),
-    doc(firestore, familyAccessPath(familyId, 'payments', member.id)),
-  ]);
+  const legacyMembers = membersSnapshot.docs.filter((member) =>
+    member.data().accessVersion === undefined || member.data().source === 'legacy',
+  );
+  const references = legacyMembers.flatMap((member) =>
+    SHAREABLE_APP_NAMES.map((appName) =>
+      doc(firestore, familyAccessPath(familyId, appName, member.id)),
+    ),
+  );
   const accessSnapshots = await Promise.all(references.map((reference) => getDoc(reference)));
 
   for (let start = 0; start < legacyMembers.length; start += 140) {
     const batch = writeBatch(firestore);
     const members = legacyMembers.slice(start, start + 140);
     members.forEach((member, index) => {
-      batch.set(member.ref, { source: 'legacy', accessVersion: 1 }, { merge: true });
-      (['shopping', 'payments'] as const).forEach((appName, appIndex) => {
-        const referenceIndex = (start + index) * 2 + appIndex;
+      if (member.data().accessVersion === undefined) {
+        batch.set(member.ref, { source: 'legacy', accessVersion: 1 }, { merge: true });
+      }
+      SHAREABLE_APP_NAMES.forEach((appName, appIndex) => {
+        const referenceIndex = (start + index) * SHAREABLE_APP_NAMES.length + appIndex;
         if (accessSnapshots[referenceIndex]?.exists()) return;
         batch.set(doc(firestore, familyAccessPath(familyId, appName, member.id)), {
           uid: member.id,

@@ -13,6 +13,7 @@ export interface AppCard {
 
 /** Приложения, которые показываем на главной (остальные — placeholder). */
 export const VISIBLE_APP_IDS = [
+  'tasks',
   'shopping',
   'salary',
   'payments',

@@ -24,12 +24,18 @@ service cloud.firestore {
     }
 
     function isShareableApp(appName) {
-      return appName in ['shopping', 'payments'];
+      return appName in ['tasks', 'shopping', 'payments'];
     }
 
     function isLegacyMember(familyId, uid) {
       let path = familyMemberDocument(familyId, uid);
       return exists(path) && !('accessVersion' in get(path).data);
+    }
+
+    function isLegacyOriginMember(familyId, uid) {
+      let path = familyMemberDocument(familyId, uid);
+      return exists(path)
+        && (!('accessVersion' in get(path).data) || get(path).data.source == 'legacy');
     }
 
     function invitationAcceptedAfter(invitationId, familyId, uid) {
@@ -82,15 +88,16 @@ service cloud.firestore {
     function validInvitationAppSelection(data) {
       return data.apps is map
         && data.apps.size() > 0
-        && data.apps.keys().hasOnly(['shopping', 'payments'])
+        && data.apps.keys().hasOnly(['tasks', 'shopping', 'payments'])
+        && (!('tasks' in data.apps) || data.apps.tasks in ['view', 'edit'])
         && (!('shopping' in data.apps) || data.apps.shopping in ['view', 'edit'])
         && (!('payments' in data.apps) || data.apps.payments in ['view', 'edit']);
     }
 
     function canCreateAppAccess(familyId, appName, uid) {
       let role = request.resource.data.role;
-      let legacyGrant = isLegacyMember(familyId, request.auth.uid)
-        && isLegacyMember(familyId, uid)
+      let legacyGrant = isLegacyOriginMember(familyId, request.auth.uid)
+        && isLegacyOriginMember(familyId, uid)
         && role == 'edit'
         && request.resource.data.source == 'legacy'
         && !('invitationId' in request.resource.data);
@@ -163,6 +170,8 @@ service cloud.firestore {
         && !exists(/databases/$(database)/documents/families/$(request.resource.data.familyId)/members/$(request.resource.data.toUid))
         && request.resource.data.status == 'pending'
         && validInvitationAppSelection(request.resource.data)
+        && (!('tasks' in request.resource.data.apps)
+          || canEditApp(request.resource.data.familyId, 'tasks'))
         && (!('shopping' in request.resource.data.apps)
           || canEditApp(request.resource.data.familyId, 'shopping'))
         && (!('payments' in request.resource.data.apps)

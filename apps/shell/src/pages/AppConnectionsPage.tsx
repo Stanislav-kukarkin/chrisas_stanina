@@ -26,6 +26,7 @@ import {
 } from '@chrisasstanina/firebase';
 
 const APP_ACCESS: Record<ShareableAppName, { label: string; description: string }> = {
+  tasks: { label: APP_LABELS.tasks, description: APP_DESCRIPTIONS.tasks },
   shopping: { label: APP_LABELS.shopping, description: APP_DESCRIPTIONS.shopping },
   payments: { label: APP_LABELS.payments, description: APP_DESCRIPTIONS.payments },
 };
@@ -45,7 +46,7 @@ export function AppConnectionsPage() {
   const [actionError, setActionError] = useState('');
   const [legacyBusy, setLegacyBusy] = useState(false);
   const [email, setEmail] = useState('');
-  const [selectedApps, setSelectedApps] = useState<AppSharingRoles>({ shopping: 'edit', payments: 'edit' });
+  const [selectedApps, setSelectedApps] = useState<AppSharingRoles>({ tasks: 'edit', shopping: 'edit', payments: 'edit' });
   const [formError, setFormError] = useState('');
   const membersQuery = useFamilyMembers(familyId, Boolean(user));
   const invitationsQuery = useQuery({
@@ -62,6 +63,7 @@ export function AppConnectionsPage() {
         if (!active) return;
         if (migrated) {
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyMembers(familyId) });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'tasks', user.uid) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'shopping', user.uid) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'payments', user.uid) });
         }
@@ -145,6 +147,7 @@ export function AppConnectionsPage() {
       await leaveLegacyFamily(user.uid, familyId);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.familyMembers(familyId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'tasks', user.uid) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'shopping', user.uid) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'payments', user.uid) }),
       ]);
@@ -248,7 +251,7 @@ export function AppConnectionsPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="font-medium text-zinc-100">Старая общая связь</p>
-                <p className="mt-1 text-sm text-zinc-400">Эти аккаунты уже были объединены в базе. Для них сохранён полный доступ к покупкам и платежам.</p>
+                <p className="mt-1 text-sm text-zinc-400">Эти аккаунты уже были объединены в базе. Для них сохранён полный доступ к семейным делам, покупкам и платежам.</p>
                 <p className="mt-3 text-sm text-zinc-300">{legacyMembers.map((member) => member.profile?.displayName || member.email).join(' · ')}</p>
               </div>
               <button type="button" disabled={legacyBusy} onClick={() => void handleLeaveLegacy()} className="rounded-lg border border-amber-500/30 px-3 py-2 text-sm text-amber-200 hover:bg-amber-500/10 disabled:opacity-50">

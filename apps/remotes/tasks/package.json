@@ -7,15 +7,19 @@
     "dev": "vite build --mode development && npx concurrently -n watch,serve \"vite build --watch --mode development\" \"vite preview --mode development --port 5001 --strictPort\"",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
     "lint": "eslint src"
   },
   "dependencies": {
     "@chrisasstanina/auth": "*",
     "@chrisasstanina/firebase": "*",
     "@chrisasstanina/shared-federation": "*",
+    "@chrisasstanina/ui": "*",
     "@tanstack/react-query": "^5.90.5",
+    "firebase": "^12.19.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@chrisasstanina/tsconfig": "*",
@@ -26,6 +30,7 @@
     "@vitejs/plugin-react": "^5.1.0",
     "tailwindcss": "^4.1.16",
     "typescript": "^5.9.3",
-    "vite": "^7.1.12"
+    "vite": "^7.1.12",
+    "vitest": "^3.2.4"
   }
 }

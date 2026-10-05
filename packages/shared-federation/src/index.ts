@@ -23,7 +23,7 @@ export const REMOTE_PORTS: Record<RemoteName, number> = {
 };
 
 export const APP_LABELS: Record<RemoteName, string> = {
-  tasks: 'Задачи',
+  tasks: 'Семейные дела',
   shopping: 'Список покупок',
   recipes: 'Рецепты',
   budget: 'Бюджет',
@@ -34,7 +34,7 @@ export const APP_LABELS: Record<RemoteName, string> = {
 };
 
 export const APP_DESCRIPTIONS: Record<RemoteName, string> = {
-  tasks: 'Семейные задачи и дела',
+  tasks: 'Kanban-доска для всей семьи',
   shopping: 'Общий список покупок',
   recipes: 'Любимые рецепты и меню',
   budget: 'Учёт расходов семьи',

@@ -84,19 +84,33 @@ export function ShoppingItemRow({
             strike="left"
             className="min-w-0 flex-1"
           />}
+          <span className="inline-flex shrink-0 items-center rounded-md bg-zinc-800/80 px-2 py-1.5 text-xs text-zinc-200">
+            {item.quantity} {item.unit}
+          </span>
+          <span className="hidden shrink-0 sm:inline-flex">{creatorBadge}</span>
           <button
             type="button"
             onClick={() => toggleExpandedItem(item.id)}
-            className="shrink-0 rounded-md bg-zinc-800/80 px-2 py-0.5 text-xs text-zinc-200 transition hover:bg-zinc-700 hover:text-white"
-            aria-label="Подробнее"
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition ${expanded ? 'bg-violet-500/15 text-violet-200' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}
+            aria-label={readOnly ? 'Подробнее о товаре' : 'Редактировать товар'}
+            aria-expanded={expanded}
+            aria-controls={`shopping-item-details-${item.id}`}
+            title={readOnly ? 'Подробнее о товаре' : 'Редактировать товар'}
           >
-            {item.quantity} {item.unit}
+            {readOnly ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden>
+                <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zM10 8a.75.75 0 01.75.75v4a.75.75 0 01-1.5 0v-4A.75.75 0 0110 8zm0-2a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden>
+                <path d="M13.586 3.586a2 2 0 012.828 2.828l-8.5 8.5a2 2 0 01-.878.513l-3.11.889a.75.75 0 01-.927-.927l.889-3.11a2 2 0 01.513-.878l8.185-8.185zM12.525 5.707L5.46 12.772a.5.5 0 00-.128.22l-.5 1.75 1.75-.5a.5.5 0 00.22-.128l7.065-7.065-1.343-1.342zM14.646 4.646l1.06 1.06a.5.5 0 000-.707l-.353-.353a.5.5 0 00-.707 0z" />
+              </svg>
+            )}
           </button>
-          <span className="hidden shrink-0 sm:inline-flex">{creatorBadge}</span>
           {!readOnly && <button
             type="button"
             onClick={() => onDelete(item.id)}
-            className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"
             aria-label="Удалить"
             title="Удалить"
           >
@@ -104,7 +118,7 @@ export function ShoppingItemRow({
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className="h-4 w-4"
+              className="h-5 w-5"
               aria-hidden
             >
               <path
@@ -119,7 +133,7 @@ export function ShoppingItemRow({
       </div>
 
       {expanded && (
-        <div className="space-y-3 border-t border-zinc-800/80 px-3 py-4 sm:px-4">
+        <div id={`shopping-item-details-${item.id}`} className="space-y-3 border-t border-zinc-800/80 px-3 py-4 sm:px-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block text-zinc-400">Количество</span>
