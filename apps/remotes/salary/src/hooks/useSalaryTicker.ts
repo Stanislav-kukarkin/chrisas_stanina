@@ -35,5 +35,8 @@ export function useSalaryTicker(
     return null;
   }
 
-  return buildSalaryProgressState(settings, calendar, timestamp);
+  return {
+    ...buildSalaryProgressState(settings, calendar, timestamp),
+    timestamp,
+  };
 }

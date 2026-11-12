@@ -10,6 +10,7 @@ export {
   isFirebaseReady,
   getFirebaseAuth,
   getFirebaseFirestore,
+  getFirebaseFunctions,
   subscribeToFirebaseAuth,
   type FirebaseServices,
 } from './init';
@@ -36,11 +37,24 @@ export {
   type ShareableAppName,
   type AppSharingRole,
   type AppSharingRoles,
+  type AppWorkspaceIds,
   type AppInvitation,
   type AppInvitationStatus,
   type InvitationTarget,
 } from './app-sharing';
 export { ensureUserBootstrap, computeProfileComplete } from './bootstrap';
+export {
+  WORKSPACE_APP_NAMES,
+  personalWorkspaceId,
+  appWorkspacePath,
+  familyAccessPath,
+  ensureUserWorkspaces,
+  resolveAppWorkspace,
+  type WorkspaceAppName,
+  type WorkspaceRole,
+  type WorkspaceSource,
+  type AppWorkspace,
+} from './app-workspaces';
 export { BootstrapProvider } from './bootstrap-provider';
 export {
   familyDocPath,

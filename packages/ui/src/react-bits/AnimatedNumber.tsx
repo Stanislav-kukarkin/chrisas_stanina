@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
 import { cn } from '../lib/cn';
 
 interface AnimatedNumberProps {
@@ -27,7 +27,7 @@ export function AnimatedNumber({
 
   useEffect(() => {
     if (prefersReducedMotion) {
-      setDisplayValue(value);
+      displayRef.current = value;
       return;
     }
 
@@ -58,17 +58,15 @@ export function AnimatedNumber({
     };
   }, [value, prefersReducedMotion]);
 
+  const renderedValue = prefersReducedMotion ? value : displayValue;
+
   return (
-    <motion.span
+    <span
       aria-live="polite"
       aria-label={ariaLabel}
       className={cn('tabular-nums', className)}
-      key={Math.floor(value)}
-      initial={prefersReducedMotion ? false : { scale: 1 }}
-      animate={prefersReducedMotion ? undefined : { scale: [1, 1.02, 1] }}
-      transition={{ duration: 0.25 }}
     >
-      {format(displayValue)}
-    </motion.span>
+      {format(renderedValue)}
+    </span>
   );
 }

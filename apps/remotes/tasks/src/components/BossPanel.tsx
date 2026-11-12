@@ -8,6 +8,13 @@ export function BossPanel() {
   const hp = useTasksStore((state) => state.bossHp);
   const maxHp = useTasksStore((state) => state.bossMaxHp);
   const bossName = useTasksStore((state) => state.bossName);
+  const bossDescription = useTasksStore((state) => state.bossDescription);
+  const bossQuote = useTasksStore((state) => state.bossQuote);
+  const bossIcon = useTasksStore((state) => state.bossIcon);
+  const bossTraits = useTasksStore((state) => state.bossTraits);
+  const bossSeason = useTasksStore((state) => state.bossSeason);
+  const bossArchetype = useTasksStore((state) => state.bossArchetype);
+  const activity = useTasksStore((state) => state.activity);
   const sprintEndsAt = useTasksStore((state) => state.sprintEndsAt);
   const tasks = useTasksStore((state) => state.tasks);
   const members = useTasksStore((state) => state.members);
@@ -35,32 +42,27 @@ export function BossPanel() {
     .filter((hunter) => hunter.member)
     .sort((left, right) => right.damage - left.damage)
     .slice(0, 2);
+  const lastAttack = activity.find((event) => event.type === 'task_completed' && event.bossDamage);
 
   return (
     <section className="boss-panel" aria-labelledby="boss-name">
       <div className="boss-copy">
         <div className="boss-eyebrow"><span /><b>БОСС СПРИНТА</b><span /></div>
         <h2 id="boss-name">{bossFirstLine}<br /><em>{bossLastWord}</em></h2>
-        <blockquote>«Я уже почти начал. Ещё пять минут…»</blockquote>
-        <div className="boss-tags"><span>◈ Осенний</span><span>⚔ Лень</span></div>
+        {bossDescription && <p className="boss-description">{bossDescription}</p>}
+        <blockquote>«{bossQuote}»</blockquote>
+        <div className="boss-tags"><span>◈ {bossSeason}</span><span>⚔ {bossArchetype}</span></div>
       </div>
 
       <div className="boss-art" aria-hidden="true">
+        {lastAttack && <strong key={lastAttack.id} className="boss-damage-pop">−{lastAttack.bossDamage}</strong>}
         <span className="ember ember-a" /><span className="ember ember-b" /><span className="ember ember-c" />
         <div className="boss-aura" />
-        <div className="pumpkin-boss">
-          <div className="boss-horns"><i /><i /></div>
-          <div className="boss-head">
-            <i className="boss-eye eye-left" /><i className="boss-eye eye-right" />
-            <span className="boss-nose" /><span className="boss-mouth" />
-          </div>
-          <div className="boss-body"><span className="boss-buckle">◇</span></div>
-          <span className="boss-arm arm-left" /><span className="boss-arm arm-right" />
-        </div>
+        <div className={`generated-boss ${bossTraits.map((trait) => `trait-${trait}`).join(' ')}`}><i /><span>{bossIcon}</span><b>✦</b></div>
       </div>
 
       <div className="boss-stats">
-        <div className="boss-hp-label"><span><b>❤</b> ЗДОРОВЬЕ</span><strong><AnimatedNumber value={hp} format={(value) => Math.round(value).toString()} /> <small>/ {maxHp} HP</small></strong></div>
+        <div className="boss-hp-label"><span><b>❤</b> ЗДОРОВЬЕ</span><strong><AnimatedNumber key="boss-hp" value={hp} format={(value) => String(Math.round(value))} aria-label={`${Math.round(hp)} здоровья`} /> <small>/ {maxHp} HP</small></strong></div>
         <div className="boss-hp-track"><i style={{ width: `${progress * 100}%` }}><span /></i></div>
         <div className="boss-meta">
           <div><Icon name="clock" size={17} /><span>До конца спринта</span><strong>{daysLeft} дн.</strong></div>

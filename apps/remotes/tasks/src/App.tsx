@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
+import { FadeIn } from '@chrisasstanina/ui';
 import {
   getFirebaseConfigFromEnv,
   initializeFirebase,
   isFirebaseReady,
 } from '@chrisasstanina/firebase';
 import { AppSidebar, MobileNavigation } from './components/AppNavigation';
+import { ActivityTicker } from './components/ActivityTicker';
 import { BossPanel } from './components/BossPanel';
 import { CreateTaskModal } from './components/CreateTaskModal';
 import { DailyQuests } from './components/DailyQuests';
@@ -19,7 +21,7 @@ import { useTasksStore } from './stores/tasks-store';
 initializeFirebase(getFirebaseConfigFromEnv());
 
 function BoardHeader() {
-  const setCreateModalOpen = useTasksStore((state) => state.setCreateModalOpen);
+  const openCreateModal = useTasksStore((state) => state.openCreateModal);
   const members = useTasksStore((state) => state.members);
   const sprintNumber = useTasksStore((state) => state.sprintNumber);
   const syncState = useTasksStore((state) => state.syncState);
@@ -33,9 +35,9 @@ function BoardHeader() {
       </div>
       <div className="header-party">
         <span>УЧАСТНИКИ</span>
-        <div className="party-avatars">{members.slice(0, 3).map((member) => <i key={member.id} className="avatar" style={{ background: member.color }} title={member.name}>{member.initials}</i>)}<button type="button" aria-label="Пригласить">з</button></div>
-        <span className={`sync-pill ${syncState}`}>{syncState === 'live' ? 'База' : syncState === 'demo' ? 'Демо' : syncState === 'loading' ? 'Загрузка' : 'Нет доступа'}</span>
-        <button type="button" disabled={!canEdit} className="header-add" onClick={() => setCreateModalOpen(true)} aria-label="Создать задачу"><Icon name="plus" size={20} /></button>
+        <div className="party-avatars">{members.slice(0, 3).map((member) => <i key={member.id} className="avatar" style={{ background: member.color }} title={member.name}>{member.initials}</i>)}<a href="/connections" aria-label="Пригласить участника">+</a></div>
+        <span className={`sync-pill ${syncState}`}>{syncState === 'live' ? 'База' : syncState === 'loading' ? 'Загрузка' : 'Нет доступа'}</span>
+        <button type="button" disabled={!canEdit} className="header-add" onClick={openCreateModal} aria-label="Создать задачу"><Icon name="plus" size={20} /></button>
       </div>
     </header>
   );
@@ -75,10 +77,23 @@ function Toast() {
   );
 }
 
+function Celebration() {
+  const celebration = useTasksStore((state) => state.celebration);
+  const dismiss = useTasksStore((state) => state.dismissCelebration);
+  useEffect(() => {
+    if (!celebration) return;
+    const timer = window.setTimeout(dismiss, 6200);
+    return () => window.clearTimeout(timer);
+  }, [celebration, dismiss]);
+  if (!celebration) return null;
+  const icon = celebration.kind === 'level' ? '⚡' : celebration.kind === 'chest' ? '🎁' : '🏆';
+  return <div className={`celebration-backdrop ${celebration.kind}`} role="dialog" aria-modal="true" aria-label={celebration.title} onMouseDown={(event) => { if (event.target === event.currentTarget) dismiss(); }}><FadeIn key={celebration.id} className="celebration-card"><div className="celebration-particles" aria-hidden="true"><i /><i /><i /><i /><i /></div><span>{icon}</span><small>{celebration.kind === 'level' ? 'НОВЫЙ УРОВЕНЬ' : celebration.kind === 'chest' ? 'RARITY REVEAL' : 'ДОСТИЖЕНИЕ ОТКРЫТО'}</small><h2>{celebration.title}</h2><p>{celebration.detail}</p><button type="button" onClick={dismiss}>Продолжить</button></FadeIn></div>;
+}
+
 export default function App() {
   const activeSection = useTasksStore((state) => state.activeSection);
   const syncState = useTasksStore((state) => state.syncState);
-  const showBoard = syncState === 'demo' || syncState === 'live';
+  const showBoard = syncState === 'live';
   return (
     <div className="tavern-app">
       {isFirebaseReady() && <FirebaseBoardBridge />}
@@ -89,6 +104,7 @@ export default function App() {
           <>
             <BoardHeader />
             {showBoard ? <div className="board-content">
+              <ActivityTicker />
               <BossPanel />
               <DailyQuests />
               <KanbanBoard />
@@ -100,6 +116,7 @@ export default function App() {
       </main>
       <MobileNavigation />
       <CreateTaskModal />
+      <Celebration />
       <Toast />
     </div>
   );

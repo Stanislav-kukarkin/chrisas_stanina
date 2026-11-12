@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  getDefaultFamilyId,
   getFirebaseConfigFromEnv,
   initializeFirebase,
   useFamilyAppAccess,
@@ -34,8 +33,8 @@ const emptyCompletions: import('./lib/domain').PaymentCompletion[] = [];
 
 export default function App() {
   const { user, loading: authLoading, firebaseReady } = usePaymentsAuth();
-  const familyId = getDefaultFamilyId();
-  const access = useFamilyAppAccess(user?.uid, 'payments', familyId);
+  const access = useFamilyAppAccess(user?.uid, 'payments');
+  const familyId = access.familyId ?? '';
   const query = usePaymentsData(firebaseReady && !authLoading && Boolean(user) && access.canView, familyId);
   const actions = usePaymentsActions(familyId);
   const [month, setMonth] = useState(monthKey());

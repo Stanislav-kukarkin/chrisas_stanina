@@ -5,6 +5,7 @@
   "workspaces": [
     "apps/*",
     "apps/remotes/*",
+    "firebase/functions",
     "packages/*"
   ],
   "scripts": {

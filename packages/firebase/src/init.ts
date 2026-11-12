@@ -1,16 +1,19 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFunctions, type Functions } from 'firebase/functions';
 import { getMissingFirebaseEnvKeys, isFirebaseConfigured, type FirebaseConfig } from './config';
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let firestore: Firestore | undefined;
+let functions: Functions | undefined;
 
 export interface FirebaseServices {
   app: FirebaseApp;
   auth: Auth;
   firestore: Firestore;
+  functions: Functions;
 }
 
 function syncFromExistingApp(): boolean {
@@ -21,11 +24,12 @@ function syncFromExistingApp(): boolean {
   app = getApps()[0];
   auth = getAuth(app);
   firestore = getFirestore(app);
+  functions = getFunctions(app, 'europe-west1');
   return true;
 }
 
 export function isFirebaseReady(): boolean {
-  if (app !== undefined && auth !== undefined && firestore !== undefined) {
+  if (app !== undefined && auth !== undefined && firestore !== undefined && functions !== undefined) {
     return true;
   }
   return syncFromExistingApp();
@@ -52,7 +56,11 @@ export function initializeFirebase(config: FirebaseConfig): FirebaseServices | n
     firestore = getFirestore(app);
   }
 
-  return { app, auth, firestore };
+  if (!functions) {
+    functions = getFunctions(app, 'europe-west1');
+  }
+
+  return { app, auth, firestore, functions };
 }
 
 export function getFirebaseAuth(): Auth {
@@ -71,4 +79,11 @@ export function getFirebaseFirestore(): Firestore {
     throw new Error('Firebase not initialized. Call initializeFirebase first.');
   }
   return firestore!;
+}
+
+export function getFirebaseFunctions(): Functions {
+  if (!functions && !syncFromExistingApp()) {
+    throw new Error('Firebase not initialized. Call initializeFirebase first.');
+  }
+  return functions!;
 }

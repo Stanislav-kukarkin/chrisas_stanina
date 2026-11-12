@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  getDefaultFamilyId,
   migrateLegacyFamilyAccess,
   queryKeys,
   useFamilyAppAccess,
@@ -11,10 +10,18 @@ import {
   type FamilyMemberWithProfile,
 } from '@chrisasstanina/firebase';
 import {
-  ensureBoardBootstrap,
   fetchBoss,
+  fetchActivity,
+  fetchCoinTransactions,
+  fetchAllPlayerProfiles,
+  fetchDailyState,
+  fetchFamilyRewards,
+  fetchInventory,
   fetchPlayerProfile,
+  fetchRewardRequests,
+  fetchSprintHistory,
   fetchTasks,
+  reconcileBoard,
 } from '../repositories/tasks-repository';
 import { configureTasksService } from '../services/tasks-service';
 import { useTasksStore } from '../stores/tasks-store';
@@ -36,45 +43,54 @@ function mapMember(member: FamilyMemberWithProfile): FamilyMember {
 
 export function FirebaseBoardBridge() {
   const user = useFirebaseUser();
-  const familyId = getDefaultFamilyId();
   const queryClient = useQueryClient();
   const setSyncState = useTasksStore((state) => state.setSyncState);
   const hydrateRemoteBoard = useTasksStore((state) => state.hydrateRemoteBoard);
-  const access = useFamilyAppAccess(user?.uid, 'tasks', familyId);
+  const access = useFamilyAppAccess(user?.uid, 'tasks');
+  const familyId = access.familyId ?? '';
   const userProfile = useUserProfile(user?.uid);
 
   const migration = useQuery({
     queryKey: ['tasks', 'legacy-access-migration', familyId, user?.uid ?? 'anonymous'],
     queryFn: () => migrateLegacyFamilyAccess(user!.uid, familyId),
-    enabled: Boolean(user),
+    enabled: Boolean(user && familyId),
     staleTime: Infinity,
   });
 
   useEffect(() => {
     if (!user || !migration.isSuccess) return;
     void queryClient.invalidateQueries({
-      queryKey: queryKeys.familyAppAccess(familyId, 'tasks', user.uid),
+      queryKey: queryKeys.appWorkspace(user.uid, 'tasks'),
     });
   }, [familyId, migration.isSuccess, queryClient, user]);
 
-  const membersQuery = useFamilyMembers(familyId, Boolean(user && access.canView));
+  const membersQuery = useFamilyMembers(familyId, Boolean(user && access.canView), 'tasks');
   const currentUserName = userProfile.data?.displayName || user?.displayName || user?.email || 'Игрок';
   const boardQuery = useQuery({
     queryKey: ['tasks', 'board', familyId, user?.uid ?? 'anonymous'],
     queryFn: async () => {
-      await ensureBoardBootstrap({
+      const context = {
         familyId,
         currentUserId: user!.uid,
         currentUserName,
-      });
-      const [tasks, profile, boss] = await Promise.all([
+      };
+      if (access.canEdit) await reconcileBoard(context);
+      const [tasks, profile, boss, history, profiles, activity, familyRewards, inventory, rewardRequests, coinTransactions] = await Promise.all([
         fetchTasks(familyId),
         fetchPlayerProfile(familyId, user!.uid),
         fetchBoss(familyId),
+        fetchSprintHistory(familyId),
+        fetchAllPlayerProfiles(familyId),
+        fetchActivity(familyId),
+        fetchFamilyRewards(familyId),
+        fetchInventory(familyId, user!.uid),
+        fetchRewardRequests(familyId, user!.uid),
+        fetchCoinTransactions(familyId, user!.uid),
       ]);
-      return { tasks, profile, boss };
+      const daily = await fetchDailyState(familyId, user!.uid, tasks);
+      return { tasks, profile, boss, history, daily, profiles, activity, familyRewards, inventory, rewardRequests, coinTransactions };
     },
-    enabled: Boolean(user && access.canView),
+    enabled: Boolean(user && familyId && access.canView),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     retry: 1,
@@ -103,15 +119,16 @@ export function FirebaseBoardBridge() {
   useEffect(() => {
     if (!user) {
       configureTasksService(null);
-      setSyncState('demo');
+      setSyncState('denied');
       return;
     }
     if (migration.isLoading || access.isLoading) {
       setSyncState('loading');
       return;
     }
-    if (migration.isError) {
-      setSyncState('error', migration.error instanceof Error ? migration.error.message : 'Не удалось проверить доступ.');
+    if (migration.isError || access.isError) {
+      const error = migration.error ?? access.error;
+      setSyncState('error', error instanceof Error ? error.message : 'Не удалось проверить доступ.');
       return;
     }
     if (!access.canView) {
@@ -119,7 +136,7 @@ export function FirebaseBoardBridge() {
       setSyncState('denied');
       return;
     }
-    if (boardIsLoading) {
+    if (boardIsLoading || membersQuery.isLoading) {
       setSyncState('loading');
       return;
     }
@@ -148,6 +165,8 @@ export function FirebaseBoardBridge() {
   }, [
     access.canEdit,
     access.canView,
+    access.error,
+    access.isError,
     access.isLoading,
     boardData,
     boardError,
@@ -157,6 +176,7 @@ export function FirebaseBoardBridge() {
     familyId,
     hydrateRemoteBoard,
     members,
+    membersQuery.isLoading,
     migration.error,
     migration.isError,
     migration.isLoading,

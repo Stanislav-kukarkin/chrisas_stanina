@@ -2,6 +2,7 @@ import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getFirebaseFirestore } from './init';
 import { userProfilePath } from './paths';
 import { isProfileComplete, randomProfileColor } from './types/profile';
+import { ensureUserWorkspaces } from './app-workspaces';
 
 export async function ensureUserBootstrap(uid: string, email: string): Promise<void> {
   const firestore = getFirebaseFirestore();
@@ -18,6 +19,7 @@ export async function ensureUserBootstrap(uid: string, email: string): Promise<v
       updatedAt: serverTimestamp(),
     });
   }
+  await ensureUserWorkspaces(uid, email);
 }
 
 export function computeProfileComplete(fields: {

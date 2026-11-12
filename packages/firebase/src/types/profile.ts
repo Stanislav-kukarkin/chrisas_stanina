@@ -15,7 +15,7 @@ export interface FamilyMember {
   uid: string;
   email: string;
   role: MemberRole;
-  source?: 'legacy' | 'invitation';
+  source?: 'legacy' | 'invitation' | 'personal';
   accessVersion?: number;
   joinedAt?: Date;
 }

@@ -5,13 +5,15 @@ export function settledTasks(tasks: FamilyTask[]) {
 }
 
 export function onTimeTaskCount(tasks: FamilyTask[]) {
-  return settledTasks(tasks).filter((task) => task.dueTone !== 'overdue').length;
+  return settledTasks(tasks).filter((task) => (
+    !task.dueDate || !task.completedAt || new Date(task.completedAt).getTime() <= new Date(task.dueDate).getTime() + 86_400_000
+  )).length;
 }
 
-export function earnedAchievementCount(tasks: FamilyTask[], streak: number) {
+export function earnedAchievementCount(tasks: FamilyTask[], streak: number, persistedCount = 0) {
   const completed = settledTasks(tasks).length;
   const onTime = onTimeTaskCount(tasks);
-  return Number(completed >= 50) + Number(streak >= 14) + Number(onTime >= 25);
+  return Math.max(persistedCount, Number(completed >= 50) + Number(streak >= 14) + Number(onTime >= 25));
 }
 
 export function bossDamageForMember(tasks: FamilyTask[], memberId: string) {

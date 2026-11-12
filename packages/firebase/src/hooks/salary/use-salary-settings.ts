@@ -25,30 +25,31 @@ async function fetchSalarySettings(
 
 export function useSalarySettings(
   uid: string | undefined,
-  familyId: string = getDefaultFamilyId(),
+  familyId: string | null = getDefaultFamilyId(),
+  enabled = true,
 ) {
   return useQuery({
-    queryKey: queryKeys.salarySettings(familyId, uid ?? 'anonymous'),
+    queryKey: queryKeys.salarySettings(familyId ?? 'unresolved', uid ?? 'anonymous'),
     queryFn: async () => {
-      if (!uid) {
-        throw new Error('User is required');
+      if (!uid || !familyId) {
+        throw new Error('User and family workspace are required');
       }
       return fetchSalarySettings(familyId, uid);
     },
-    enabled: Boolean(uid),
+    enabled: Boolean(uid && familyId && enabled),
   });
 }
 
 export function useUpdateSalarySettings(
   uid: string | undefined,
-  familyId: string = getDefaultFamilyId(),
+  familyId: string | null = getDefaultFamilyId(),
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (update: SalarySettingsUpdate | SalarySettingsInput) => {
-      if (!uid) {
-        throw new Error('User is required');
+      if (!uid || !familyId) {
+        throw new Error('User and family workspace are required');
       }
 
       const current = (await fetchSalarySettings(familyId, uid)) ?? mapSalarySettings(undefined);
@@ -66,7 +67,7 @@ export function useUpdateSalarySettings(
       return next;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.salarySettings(familyId, uid ?? 'anonymous'), data);
+      queryClient.setQueryData(queryKeys.salarySettings(familyId ?? 'unresolved', uid ?? 'anonymous'), data);
     },
   });
 }

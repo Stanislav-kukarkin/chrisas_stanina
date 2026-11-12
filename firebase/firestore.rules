@@ -23,8 +23,23 @@ service cloud.firestore {
       return /databases/$(database)/documents/appInvitations/$(invitationId);
     }
 
+    function isPersonalFamilyId(familyId, uid) {
+      return familyId == 'personal-' + uid;
+    }
+
+    function familyDocument(familyId) {
+      return /databases/$(database)/documents/families/$(familyId);
+    }
+
+    function isPersonalFamilyOwnerAfter(familyId, uid) {
+      return isPersonalFamilyId(familyId, uid)
+        && existsAfter(familyDocument(familyId))
+        && getAfter(familyDocument(familyId)).data.ownerId == uid
+        && getAfter(familyDocument(familyId)).data.kind == 'personal';
+    }
+
     function isShareableApp(appName) {
-      return appName in ['tasks', 'shopping', 'payments'];
+      return appName in ['tasks', 'shopping', 'salary', 'payments'];
     }
 
     function isLegacyMember(familyId, uid) {
@@ -38,12 +53,35 @@ service cloud.firestore {
         && (!('accessVersion' in get(path).data) || get(path).data.source == 'legacy');
     }
 
-    function invitationAcceptedAfter(invitationId, familyId, uid) {
+    function invitationWorkspace(data, appName) {
+      return ('workspaceIds' in data && data.workspaceIds is map && appName in data.workspaceIds)
+        ? data.workspaceIds[appName]
+        : data.familyId;
+    }
+
+    function invitationAcceptedAfter(invitationId, familyId, appName, uid) {
       let path = appInvitationDocument(invitationId);
       return existsAfter(path)
         && getAfter(path).data.status == 'accepted'
-        && getAfter(path).data.familyId == familyId
+        && invitationWorkspace(getAfter(path).data, appName) == familyId
         && getAfter(path).data.toUid == uid;
+    }
+
+    function invitationGrantsFamilyAfter(invitationId, familyId, uid) {
+      let path = appInvitationDocument(invitationId);
+      return existsAfter(path)
+        && getAfter(path).data.status == 'accepted'
+        && getAfter(path).data.toUid == uid
+        && (
+          ('tasks' in getAfter(path).data.apps
+            && invitationWorkspace(getAfter(path).data, 'tasks') == familyId)
+          || ('shopping' in getAfter(path).data.apps
+            && invitationWorkspace(getAfter(path).data, 'shopping') == familyId)
+          || ('salary' in getAfter(path).data.apps
+            && invitationWorkspace(getAfter(path).data, 'salary') == familyId)
+          || ('payments' in getAfter(path).data.apps
+            && invitationWorkspace(getAfter(path).data, 'payments') == familyId)
+        );
     }
 
     function hasValidAppAccess(familyId, appName, uid) {
@@ -55,7 +93,10 @@ service cloud.firestore {
           || (
             exists(appInvitationDocument(get(path).data.invitationId))
             && get(appInvitationDocument(get(path).data.invitationId)).data.status == 'accepted'
-            && get(appInvitationDocument(get(path).data.invitationId)).data.familyId == familyId
+            && invitationWorkspace(
+              get(appInvitationDocument(get(path).data.invitationId)).data,
+              appName
+            ) == familyId
             && get(appInvitationDocument(get(path).data.invitationId)).data.toUid == uid
             && get(appInvitationDocument(get(path).data.invitationId)).data.apps[appName] == get(path).data.role
           )
@@ -85,13 +126,96 @@ service cloud.firestore {
         );
     }
 
+    function canReadOwnSalarySettings(familyId, uid) {
+      return isSignedIn()
+        && request.auth.uid == uid
+        && isFamilyMember(familyId)
+        && (
+          canReadApp(familyId, 'salary')
+          || isPersonalFamilyId(familyId, uid)
+          || isLegacyOriginMember(familyId, uid)
+        );
+    }
+
+    function canEditOwnSalarySettings(familyId, uid) {
+      return isSignedIn()
+        && request.auth.uid == uid
+        && isFamilyMember(familyId)
+        && (
+          canEditApp(familyId, 'salary')
+          || isPersonalFamilyId(familyId, uid)
+          || isLegacyOriginMember(familyId, uid)
+        );
+    }
+
+    function validTasksTask(data) {
+      return data.keys().hasOnly([
+          'title', 'description', 'status', 'authorId', 'assigneeIds', 'reviewerId',
+          'difficulty', 'difficultyStatus', 'difficultyProposedById', 'pendingAssigneeIds',
+          'transferRequestedById', 'transferRequestedAt', 'estimatedDuration',
+          'dueDate', 'sprintId', 'blockerIds', 'bonusCoins', 'bonusCoinsAuthorId',
+          'bonusReservedAt', 'bossPlannedAt', 'rolloverCount', 'recurrence',
+          'recurrenceTemplateId', 'recurrenceDateKey', 'rewardSettledAt',
+          'bossDamageSettledAt', 'reviewStartedAt', 'completedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 180
+        && data.status in ['backlog', 'planned', 'in_progress', 'review', 'done']
+        && data.authorId is string
+        && data.assigneeIds is list
+        && data.reviewerId is string
+        && data.difficulty in ['easy', 'normal', 'hard', 'epic']
+        && data.difficultyStatus in ['pending', 'agreed', 'declined']
+        && data.blockerIds is list
+        && data.blockerIds.size() <= 20
+        && data.bonusCoins is number
+        && data.bonusCoins >= 0
+        && data.bonusCoins <= 100
+        && data.rolloverCount is number
+        && data.rolloverCount >= 0;
+    }
+
+    function validTasksProfile(data) {
+      return (!('xp' in data) || (data.xp is number && data.xp >= 0))
+        && (!('coins' in data) || (data.coins is number && data.coins >= 0))
+        && (!('reservedCoins' in data) || (data.reservedCoins is number && data.reservedCoins >= 0))
+        && (!('streakFreezes' in data) || (data.streakFreezes is number && data.streakFreezes >= 0));
+    }
+
+    function validCoinTransaction(data, uid) {
+      return data.keys().hasOnly(['userId', 'type', 'amount', 'referenceId', 'createdAt'])
+        && data.userId == uid
+        && data.type is string
+        && data.amount is number
+        && data.referenceId is string;
+    }
+
     function validInvitationAppSelection(data) {
       return data.apps is map
         && data.apps.size() > 0
-        && data.apps.keys().hasOnly(['tasks', 'shopping', 'payments'])
+        && data.apps.keys().hasOnly(['tasks', 'shopping', 'salary', 'payments'])
         && (!('tasks' in data.apps) || data.apps.tasks in ['view', 'edit'])
         && (!('shopping' in data.apps) || data.apps.shopping in ['view', 'edit'])
+        && (!('salary' in data.apps) || data.apps.salary in ['view', 'edit'])
         && (!('payments' in data.apps) || data.apps.payments in ['view', 'edit']);
+    }
+
+    function validInvitationWorkspaces(data) {
+      return data.workspaceIds is map
+        && data.workspaceIds.keys().hasOnly(['tasks', 'shopping', 'salary', 'payments'])
+        && (!('tasks' in data.apps)
+          || ('tasks' in data.workspaceIds && data.workspaceIds.tasks is string))
+        && (!('shopping' in data.apps)
+          || ('shopping' in data.workspaceIds && data.workspaceIds.shopping is string))
+        && (!('salary' in data.apps)
+          || ('salary' in data.workspaceIds && data.workspaceIds.salary is string))
+        && (!('payments' in data.apps)
+          || ('payments' in data.workspaceIds && data.workspaceIds.payments is string))
+        && (!('tasks' in data.workspaceIds) || 'tasks' in data.apps)
+        && (!('shopping' in data.workspaceIds) || 'shopping' in data.apps)
+        && (!('salary' in data.workspaceIds) || 'salary' in data.apps)
+        && (!('payments' in data.workspaceIds) || 'payments' in data.apps);
     }
 
     function canCreateAppAccess(familyId, appName, uid) {
@@ -102,27 +226,25 @@ service cloud.firestore {
         && request.resource.data.source == 'legacy'
         && !('invitationId' in request.resource.data);
       let invitationGrant = request.auth.uid == uid
-        && role in ['view', 'edit', 'none']
+        && role in ['view', 'edit']
         && 'invitationId' in request.resource.data
-        && invitationAcceptedAfter(request.resource.data.invitationId, familyId, uid)
-        && (
-          (role == 'none'
-            && !(appName in getAfter(appInvitationDocument(request.resource.data.invitationId)).data.apps))
-          || getAfter(appInvitationDocument(request.resource.data.invitationId)).data.apps[appName] == role
-        );
-      return isSignedIn() && isShareableApp(appName) && (legacyGrant || invitationGrant);
+        && invitationAcceptedAfter(request.resource.data.invitationId, familyId, appName, uid)
+        && getAfter(appInvitationDocument(request.resource.data.invitationId)).data.apps[appName] == role;
+      let personalGrant = request.auth.uid == uid
+        && isPersonalFamilyOwnerAfter(familyId, uid)
+        && role == 'edit'
+        && request.resource.data.source == 'personal'
+        && !('invitationId' in request.resource.data);
+      return isSignedIn() && isShareableApp(appName)
+        && (legacyGrant || invitationGrant || personalGrant);
     }
 
     function canUpdateAppAccess(familyId, appName, uid) {
       return request.auth.uid == uid
         && 'invitationId' in request.resource.data
-        && invitationAcceptedAfter(request.resource.data.invitationId, familyId, uid)
-        && (
-          (request.resource.data.role == 'none'
-            && !(appName in getAfter(appInvitationDocument(request.resource.data.invitationId)).data.apps))
-          || getAfter(appInvitationDocument(request.resource.data.invitationId)).data.apps[appName]
-            == request.resource.data.role
-        );
+        && invitationAcceptedAfter(request.resource.data.invitationId, familyId, appName, uid)
+        && getAfter(appInvitationDocument(request.resource.data.invitationId)).data.apps[appName]
+          == request.resource.data.role;
     }
 
     function canDeleteInvitedMember(uid) {
@@ -150,12 +272,24 @@ service cloud.firestore {
           && request.resource.data.groups is list
           && request.resource.data.appearance is map;
       }
+
+      match /appWorkspaces/{appName} {
+        allow read, delete: if isSignedIn()
+          && request.auth.uid == uid
+          && isShareableApp(appName);
+        allow create, update: if isSignedIn()
+          && request.auth.uid == uid
+          && isShareableApp(appName)
+          && request.resource.data.keys().hasOnly(['familyId', 'source', 'updatedAt'])
+          && request.resource.data.familyId is string
+          && request.resource.data.source in ['personal', 'shared', 'legacy'];
+      }
     }
 
     match /appInvitations/{invitationId} {
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly([
-          'familyId', 'fromUid', 'fromEmail', 'toUid', 'toEmail', 'apps', 'status', 'createdAt', 'respondedAt'
+          'familyId', 'workspaceIds', 'fromUid', 'fromEmail', 'toUid', 'toEmail', 'apps', 'status', 'createdAt', 'respondedAt'
         ])
         && request.resource.data.fromUid == request.auth.uid
         && request.resource.data.fromEmail is string
@@ -166,16 +300,17 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.resource.data.toUid)).data.email
           == request.resource.data.toEmail
         && request.resource.data.familyId is string
-        && isFamilyMember(request.resource.data.familyId)
-        && !exists(/databases/$(database)/documents/families/$(request.resource.data.familyId)/members/$(request.resource.data.toUid))
         && request.resource.data.status == 'pending'
         && validInvitationAppSelection(request.resource.data)
+        && validInvitationWorkspaces(request.resource.data)
         && (!('tasks' in request.resource.data.apps)
-          || canEditApp(request.resource.data.familyId, 'tasks'))
+          || canEditApp(invitationWorkspace(request.resource.data, 'tasks'), 'tasks'))
         && (!('shopping' in request.resource.data.apps)
-          || canEditApp(request.resource.data.familyId, 'shopping'))
+          || canEditApp(invitationWorkspace(request.resource.data, 'shopping'), 'shopping'))
+        && (!('salary' in request.resource.data.apps)
+          || canEditApp(invitationWorkspace(request.resource.data, 'salary'), 'salary'))
         && (!('payments' in request.resource.data.apps)
-          || canEditApp(request.resource.data.familyId, 'payments'));
+          || canEditApp(invitationWorkspace(request.resource.data, 'payments'), 'payments'));
 
       allow read: if isSignedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
@@ -186,9 +321,7 @@ service cloud.firestore {
         && (
           (resource.data.status == 'pending'
             && resource.data.toUid == request.auth.uid
-            && request.resource.data.status in ['accepted', 'declined']
-            && (request.resource.data.status != 'accepted'
-              || !exists(familyMemberDocument(resource.data.familyId, request.auth.uid))))
+            && request.resource.data.status in ['accepted', 'declined'])
           || (resource.data.status == 'pending'
             && resource.data.fromUid == request.auth.uid
             && request.resource.data.status == 'cancelled')
@@ -200,24 +333,36 @@ service cloud.firestore {
     }
 
     match /families/{familyId} {
-      allow read: if isFamilyMember(familyId);
-      allow write: if false;
+      allow read: if isFamilyMember(familyId)
+        || (isSignedIn() && isPersonalFamilyId(familyId, request.auth.uid));
+      allow create: if isSignedIn()
+        && isPersonalFamilyId(familyId, request.auth.uid)
+        && request.resource.data.keys().hasOnly(['ownerId', 'kind', 'createdAt', 'updatedAt'])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.kind == 'personal';
+      allow update, delete: if false;
 
       match /members/{uid} {
         // Своего member можно читать до bootstrap — иначе isFamilyMember() замкнутый круг
         allow read: if isFamilyMember(familyId)
           || (isSignedIn() && request.auth.uid == uid);
-        allow create: if isSignedIn()
-          && request.auth.uid == uid
+        allow create: if isSignedIn() && request.auth.uid == uid
           && request.resource.data.keys().hasOnly([
             'uid', 'email', 'role', 'source', 'accessVersion', 'invitationId', 'joinedAt'
           ])
           && request.resource.data.uid == uid
-          && request.resource.data.role == 'member'
-          && request.resource.data.accessVersion == 1
-          && request.resource.data.source == 'invitation'
-          && 'invitationId' in request.resource.data
-          && invitationAcceptedAfter(request.resource.data.invitationId, familyId, uid);
+          && (
+            (request.resource.data.role == 'member'
+              && request.resource.data.accessVersion == 1
+              && request.resource.data.source == 'invitation'
+              && 'invitationId' in request.resource.data
+              && invitationGrantsFamilyAfter(request.resource.data.invitationId, familyId, uid))
+            || (request.resource.data.role == 'admin'
+              && request.resource.data.accessVersion == 2
+              && request.resource.data.source == 'personal'
+              && !('invitationId' in request.resource.data)
+              && isPersonalFamilyOwnerAfter(familyId, uid))
+          );
         allow update: if isSignedIn()
           && (
             (request.auth.uid == uid
@@ -229,7 +374,7 @@ service cloud.firestore {
               && request.resource.data.accessVersion == 1
               && request.resource.data.source == 'invitation'
               && 'invitationId' in request.resource.data
-              && invitationAcceptedAfter(request.resource.data.invitationId, familyId, uid))
+              && invitationGrantsFamilyAfter(request.resource.data.invitationId, familyId, uid))
             || (isLegacyMember(familyId, uid)
               && isLegacyMember(familyId, request.auth.uid)
               && request.resource.data.accessVersion == 1
@@ -245,16 +390,83 @@ service cloud.firestore {
           || (isSignedIn() && request.auth.uid == uid);
         allow create: if canCreateAppAccess(familyId, appName, uid);
         allow update: if canUpdateAppAccess(familyId, appName, uid);
-        allow delete: if isSignedIn() && request.auth.uid == uid;
+        allow delete: if isSignedIn() && (
+          request.auth.uid == uid
+          || ('invitationId' in resource.data
+            && exists(appInvitationDocument(resource.data.invitationId))
+            && get(appInvitationDocument(resource.data.invitationId)).data.fromUid == request.auth.uid
+            && get(appInvitationDocument(resource.data.invitationId)).data.toUid == uid)
+        );
       }
 
       match /apps/salary/settings/{uid} {
-        allow read, write: if isFamilyMember(familyId) && request.auth.uid == uid;
+        allow read: if canReadOwnSalarySettings(familyId, uid);
+        allow create, update, delete: if canEditOwnSalarySettings(familyId, uid);
+      }
+
+      match /apps/tasks {
+        allow read: if canReadApp(familyId, 'tasks');
+        allow create, update: if canEditApp(familyId, 'tasks');
+        allow delete: if false;
+      }
+
+      match /apps/tasks/tasks/{taskId} {
+        allow read: if canReadApp(familyId, 'tasks');
+        allow create: if canEditApp(familyId, 'tasks')
+          && validTasksTask(request.resource.data)
+          && (
+            request.resource.data.authorId == request.auth.uid
+            || (
+              request.resource.data.recurrenceTemplateId != null
+              && exists(/databases/$(database)/documents/families/$(familyId)/apps/tasks/recurrenceTemplates/$(request.resource.data.recurrenceTemplateId))
+              && get(/databases/$(database)/documents/families/$(familyId)/apps/tasks/recurrenceTemplates/$(request.resource.data.recurrenceTemplateId)).data.authorId
+                == request.resource.data.authorId
+            )
+          );
+        allow update: if canEditApp(familyId, 'tasks')
+          && request.resource.data.authorId == resource.data.authorId
+          && validTasksTask(request.resource.data);
+        allow delete: if canEditApp(familyId, 'tasks')
+          && resource.data.authorId == request.auth.uid
+          && resource.data.status != 'done';
+      }
+
+      match /apps/tasks/profiles/{uid} {
+        allow read: if canReadApp(familyId, 'tasks');
+        allow create, update: if canEditApp(familyId, 'tasks')
+          && validTasksProfile(request.resource.data);
+        allow delete: if false;
+
+        match /coinTransactions/{transactionId} {
+          allow read: if canReadApp(familyId, 'tasks');
+          allow create: if canEditApp(familyId, 'tasks')
+            && validCoinTransaction(request.resource.data, uid);
+          allow update, delete: if false;
+        }
+
+        match /inventory/{itemId} {
+          allow read: if canReadApp(familyId, 'tasks');
+          // Rollover, boss and family-reward flows can award or return an item
+          // to another member. App-level `edit` is the authorization boundary.
+          allow create, update: if canEditApp(familyId, 'tasks');
+          allow delete: if false;
+        }
+      }
+
+      match /apps/tasks/{collectionName}/{document=**} {
+        allow read: if canReadApp(familyId, 'tasks');
+        allow create, update, delete: if collectionName != 'tasks'
+          && collectionName != 'profiles'
+          && canEditApp(familyId, 'tasks');
       }
 
       match /apps/{appName}/{document=**} {
-        allow read: if canReadApp(familyId, appName);
-        allow create, update, delete: if canEditApp(familyId, appName);
+        allow read: if appName != 'tasks'
+          && appName != 'salary'
+          && canReadApp(familyId, appName);
+        allow create, update, delete: if appName != 'tasks'
+          && appName != 'salary'
+          && canEditApp(familyId, appName);
       }
     }
   }

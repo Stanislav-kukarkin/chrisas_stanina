@@ -1,27 +1,35 @@
 import { useQuery } from '@tanstack/react-query';
-import { getDefaultFamilyId } from '../config';
 import { getFamilyAppRole, type ShareableAppName } from '../app-sharing';
+import { resolveAppWorkspace } from '../app-workspaces';
 import { queryKeys } from '../query-keys';
 
 export function useFamilyAppAccess(
   uid: string | undefined,
   appName: ShareableAppName,
-  familyId = getDefaultFamilyId(),
+  familyId?: string,
 ) {
   const query = useQuery({
-    queryKey: queryKeys.familyAppAccess(familyId, appName, uid ?? 'anonymous'),
-    queryFn: () => getFamilyAppRole(uid!, appName, familyId),
+    queryKey: familyId
+      ? queryKeys.familyAppAccess(familyId, appName, uid ?? 'anonymous')
+      : queryKeys.appWorkspace(uid ?? 'anonymous', appName),
+    queryFn: async () => {
+      if (familyId) {
+        const role = await getFamilyAppRole(uid!, appName, familyId);
+        return role ? { familyId, role, source: 'shared' as const } : null;
+      }
+      return resolveAppWorkspace(uid!, appName);
+    },
     enabled: Boolean(uid),
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-    refetchInterval: 30_000,
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
   });
 
   return {
     ...query,
-    role: query.data ?? null,
-    canView: query.data === 'view' || query.data === 'edit',
-    canEdit: query.data === 'edit',
-    familyId,
+    role: query.data?.role ?? null,
+    canView: query.data?.role === 'view' || query.data?.role === 'edit',
+    canEdit: query.data?.role === 'edit',
+    familyId: query.data?.familyId ?? familyId ?? null,
+    source: query.data?.source ?? null,
   };
 }

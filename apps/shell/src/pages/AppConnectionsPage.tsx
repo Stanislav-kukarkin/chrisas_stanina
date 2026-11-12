@@ -19,6 +19,7 @@ import {
   sendAppInvitation,
   SHAREABLE_APP_NAMES,
   useFamilyMembers,
+  useFamilyAppAccess,
   type AppInvitation,
   type AppSharingRole,
   type AppSharingRoles,
@@ -28,6 +29,7 @@ import {
 const APP_ACCESS: Record<ShareableAppName, { label: string; description: string }> = {
   tasks: { label: APP_LABELS.tasks, description: APP_DESCRIPTIONS.tasks },
   shopping: { label: APP_LABELS.shopping, description: APP_DESCRIPTIONS.shopping },
+  salary: { label: APP_LABELS.salary, description: APP_DESCRIPTIONS.salary },
   payments: { label: APP_LABELS.payments, description: APP_DESCRIPTIONS.payments },
 };
 
@@ -46,9 +48,24 @@ export function AppConnectionsPage() {
   const [actionError, setActionError] = useState('');
   const [legacyBusy, setLegacyBusy] = useState(false);
   const [email, setEmail] = useState('');
-  const [selectedApps, setSelectedApps] = useState<AppSharingRoles>({ tasks: 'edit', shopping: 'edit', payments: 'edit' });
+  const [selectedApps, setSelectedApps] = useState<AppSharingRoles>({
+    tasks: 'edit',
+    shopping: 'edit',
+    salary: 'edit',
+    payments: 'edit',
+  });
   const [formError, setFormError] = useState('');
   const membersQuery = useFamilyMembers(familyId, Boolean(user));
+  const tasksWorkspace = useFamilyAppAccess(user?.uid, 'tasks');
+  const shoppingWorkspace = useFamilyAppAccess(user?.uid, 'shopping');
+  const salaryWorkspace = useFamilyAppAccess(user?.uid, 'salary');
+  const paymentsWorkspace = useFamilyAppAccess(user?.uid, 'payments');
+  const appWorkspaces = {
+    tasks: tasksWorkspace,
+    shopping: shoppingWorkspace,
+    salary: salaryWorkspace,
+    payments: paymentsWorkspace,
+  } as const;
   const invitationsQuery = useQuery({
     queryKey: queryKeys.appInvitations(user?.uid ?? 'anonymous'),
     queryFn: () => listAppInvitations(user!.uid),
@@ -65,6 +82,7 @@ export function AppConnectionsPage() {
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyMembers(familyId) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'tasks', user.uid) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'shopping', user.uid) });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'salary', user.uid) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'payments', user.uid) });
         }
       })
@@ -115,6 +133,9 @@ export function AppConnectionsPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.appInvitations(user!.uid) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyMembers(familyId) }),
+        ...SHAREABLE_APP_NAMES.map((appName) =>
+          queryClient.invalidateQueries({ queryKey: queryKeys.appWorkspace(user!.uid, appName) }),
+        ),
       ]);
     },
     onError: (error) => setActionError(error instanceof Error ? error.message : String(error)),
@@ -149,7 +170,11 @@ export function AppConnectionsPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.familyMembers(familyId) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'tasks', user.uid) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'shopping', user.uid) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'salary', user.uid) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'payments', user.uid) }),
+        ...SHAREABLE_APP_NAMES.map((appName) =>
+          queryClient.invalidateQueries({ queryKey: queryKeys.appWorkspace(user.uid, appName) }),
+        ),
       ]);
     } catch (error) {
       setMigrationError(error instanceof Error ? error.message : String(error));
@@ -171,6 +196,7 @@ export function AppConnectionsPage() {
           <h1 className="mt-2 text-3xl font-semibold text-zinc-100">Объединение приложений</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             Пригласите человека по email и отдельно выберите приложения и уровень доступа. Объединение начнётся после принятия приглашения.
+            Приложения без активной связи останутся личными.
           </p>
         </div>
         <div className="flex gap-2">
@@ -193,6 +219,8 @@ export function AppConnectionsPage() {
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {REMOTE_NAMES.map((appName: RemoteName) => {
           const shareable = SHAREABLE_APP_NAMES.includes(appName as ShareableAppName);
+          const workspace = shareable ? appWorkspaces[appName as ShareableAppName] : null;
+          const isShared = workspace?.source === 'shared' || workspace?.source === 'legacy';
           return (
             <article key={appName} className={`rounded-2xl border p-5 ${shareable ? 'border-zinc-700 bg-zinc-900/50' : 'border-zinc-800/70 bg-zinc-900/20 opacity-60'}`}>
               <div className="flex items-start justify-between gap-4">
@@ -201,9 +229,22 @@ export function AppConnectionsPage() {
                   <p className="mt-1 text-sm text-zinc-400">{APP_DESCRIPTIONS[appName]}</p>
                 </div>
                 <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${shareable ? 'bg-teal-400/10 text-teal-200' : 'bg-zinc-800 text-zinc-500'}`}>
-                  {shareable ? 'Доступно' : 'Скоро'}
+                  {shareable ? (isShared ? 'Общее' : 'Личное') : 'Скоро'}
                 </span>
               </div>
+              {shareable && (
+                <p className="mt-4 text-xs text-zinc-500">
+                  {workspace?.isLoading
+                    ? 'Проверяем пространство…'
+                    : appName === 'salary'
+                      ? isShared
+                        ? 'Общий доступ включён, настройки зарплаты каждого участника приватны'
+                        : 'Настройки зарплаты видны только вам'
+                      : isShared
+                        ? 'Данные этого приложения доступны участникам связи'
+                        : 'Ваши данные видны только вам'}
+                </p>
+              )}
               {!shareable && <p className="mt-4 text-xs text-zinc-500">Совместный доступ пока не подключён</p>}
             </article>
           );
@@ -251,7 +292,7 @@ export function AppConnectionsPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="font-medium text-zinc-100">Старая общая связь</p>
-                <p className="mt-1 text-sm text-zinc-400">Эти аккаунты уже были объединены в базе. Для них сохранён полный доступ к семейным делам, покупкам и платежам.</p>
+                <p className="mt-1 text-sm text-zinc-400">Эти аккаунты уже были объединены в базе. Для них сохранён доступ к семейным делам, покупкам, Salary Flow и платежам.</p>
                 <p className="mt-3 text-sm text-zinc-300">{legacyMembers.map((member) => member.profile?.displayName || member.email).join(' · ')}</p>
               </div>
               <button type="button" disabled={legacyBusy} onClick={() => void handleLeaveLegacy()} className="rounded-lg border border-amber-500/30 px-3 py-2 text-sm text-amber-200 hover:bg-amber-500/10 disabled:opacity-50">

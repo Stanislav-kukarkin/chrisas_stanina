@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import {
   getFirebaseConfigFromEnv,
-  getDefaultFamilyId,
   initializeFirebase,
   useFamilyAppAccess,
   useAddShoppingFavorite,
@@ -28,11 +27,11 @@ initializeFirebase(getFirebaseConfigFromEnv());
 
 export default function App() {
   const user = useFirebaseUser();
-  const familyId = getDefaultFamilyId();
-  const access = useFamilyAppAccess(user?.uid, 'shopping', familyId);
+  const access = useFamilyAppAccess(user?.uid, 'shopping');
+  const familyId = access.familyId ?? '';
   const { data: items = [], isLoading, isError, refetch } = useShoppingItems(familyId, access.canView);
   const { data: favorites = [] } = useShoppingFavorites(familyId, access.canView);
-  const { data: members = [] } = useFamilyMembers(familyId, access.canView);
+  const { data: members = [] } = useFamilyMembers(familyId, access.canView, 'shopping');
 
   const addItem = useAddShoppingItem(familyId);
   const updateItem = useUpdateShoppingItem(familyId);

@@ -59,7 +59,13 @@ VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_DEFAULT_FAMILY_ID=main
+VITE_TASKS_SERVER_COMMANDS=false
 ```
+
+`VITE_TASKS_SERVER_COMMANDS=true` переводит критичные операции экономики
+«Семейных дел» на авторизованную Cloud Function `tasksCommand`. Не включайте
+флаг до публикации функции; на Spark-плане продолжает работать текущий путь
+через атомарные Firestore-транзакции.
 
 6. **Authentication** → Users → **Add user** — создайте аккаунты семьи вручную (UI регистрации нет)
 7. Установите Firebase CLI и задеployьте rules:
@@ -75,12 +81,22 @@ firebase deploy --only firestore:rules
 
 ```
 users/{uid}                                      — профиль (имя, emoji, цвет)
+users/{uid}/appWorkspaces/{appName}              — активное пространство приложения
+families/personal-{uid}                          — личное пространство пользователя
 families/{familyId}/members/{uid}                — участник семьи
+families/{familyId}/appAccess/{appName}/members/{uid} — права на конкретное приложение
 families/{familyId}/apps/shopping/items/{id}   — товары
 families/{familyId}/apps/shopping/favorites/{id} — избранное
 ```
 
-Rules проверяют membership: `families/{familyId}/members/{auth.uid}` must exist.
+При первом входе автоматически создаётся личное пространство пользователя. Для
+`tasks`, `shopping`, `salary` и `payments` активное пространство выбирается независимо:
+без связи используется `personal-{uid}`, после принятия приглашения — пространство
+конкретного приложения из связи. Rules проверяют и membership, и app-specific access.
+
+В `Salary Flow` пространство и доступ тоже выбираются через связь, но документ
+настроек остаётся приватным для своего UID: участники общего пространства не читают
+размер зарплаты и рабочий график друг друга.
 
 После обновления rules:
 ```bash
@@ -91,7 +107,8 @@ firebase deploy --only firestore:rules
 
 1. Добавьте всех участников в Authentication → Users
 2. Каждый логинится → заполняет профиль (модалка или `/settings`)
-3. Откройте `/apps/shopping` — общий список семьи
+3. Откройте `/apps/shopping` — сначала пользователь увидит личный список
+4. Для общего списка создайте связь в `/connections` и выберите `shopping`
 
 ## Сборка
 

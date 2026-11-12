@@ -7,6 +7,7 @@ import {
   listAppInvitations,
   queryKeys,
   respondToAppInvitation,
+  SHAREABLE_APP_NAMES,
   type AppInvitation,
   type ShareableAppName,
 } from '@chrisasstanina/firebase';
@@ -30,7 +31,12 @@ export function AppConnectionRequestsPage() {
     enabled: Boolean(user),
   });
   const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.appInvitations(user!.uid) });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.appInvitations(user!.uid) }),
+      ...SHAREABLE_APP_NAMES.map((appName) =>
+        queryClient.invalidateQueries({ queryKey: queryKeys.appWorkspace(user!.uid, appName) }),
+      ),
+    ]);
   };
   const respond = useMutation({
     mutationFn: ({ id, accept }: { id: string; accept: boolean }) => respondToAppInvitation(user!.uid, id, accept),

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite build --mode development && npx concurrently -n watch,serve \"vite build --watch --mode development\" \"vite preview --mode development --port 5001 --strictPort\"",
+    "dev": "vite build --mode development --outDir dist-dev && npx concurrently -n watch,serve \"vite build --watch --mode development --outDir dist-dev\" \"vite preview --mode development --outDir dist-dev --port 5001 --strictPort\"",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

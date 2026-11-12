@@ -13,8 +13,9 @@ const items: { id: AppSection; label: string; icon: IconName }[] = [
 
 function AchievementBadge() {
   const tasks = useTasksStore((state) => state.tasks);
-  const streak = useTasksStore((state) => state.player.streak);
-  const count = earnedAchievementCount(tasks, streak);
+  const streak = useTasksStore((state) => state.player.streaks.task.count);
+  const persistedCount = useTasksStore((state) => state.player.achievementIds.length);
+  const count = earnedAchievementCount(tasks, streak, persistedCount);
   return count > 0 ? <em>{count}</em> : null;
 }
 
@@ -50,14 +51,14 @@ export function AppSidebar() {
       <div className="sidebar-spacer" />
       <section className="sidebar-player">
         <div className="sidebar-player-top">
-          <div className="avatar" style={{ background: currentMember?.color }}>{currentMember?.initials ?? '•'}</div>
+          <div className={`avatar frame-${player.activeFrame ?? 'none'}`} style={{ background: currentMember?.color }}>{player.avatarOverride ?? currentMember?.initials ?? '•'}</div>
           <div><strong>{currentMember?.name ?? 'Игрок'}</strong><span>LVL {player.level}</span></div>
           <button type="button" aria-label="Открыть профиль" onClick={() => setActiveSection('profile')}>›</button>
         </div>
         <div className="mini-progress"><i style={{ width: `${(player.xp / player.xpToNext) * 100}%` }} /></div>
         <div className="sidebar-stats">
           <span><b>◈</b> {player.coins}</span>
-          <span><b>🔥</b> {player.streak} дн.</span>
+          <span><b>🔥</b> {player.streaks.task.count} дн.</span>
         </div>
       </section>
     </aside>
@@ -69,7 +70,7 @@ export function MobileNavigation() {
   const setActiveSection = useTasksStore((state) => state.setActiveSection);
   return (
     <nav className="mobile-nav" aria-label="Мобильная навигация">
-      {items.slice(0, 5).map((item) => (
+      {items.map((item) => (
         <button key={item.id} type="button" className={activeSection === item.id ? 'active' : undefined} onClick={() => setActiveSection(item.id)}>
           <Icon name={item.icon} size={20} />
           <span>{item.label}</span>

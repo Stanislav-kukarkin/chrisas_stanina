@@ -13,16 +13,26 @@ import {
 import { getDefaultFamilyId } from './config';
 import { getFirebaseFirestore } from './init';
 import { familyMemberPath, familyMembersCollectionPath } from './paths';
+import {
+  appWorkspacePath,
+  ensureUserWorkspaces,
+  familyAccessPath,
+  personalWorkspaceId,
+  resolveAppWorkspace,
+  WORKSPACE_APP_NAMES,
+} from './app-workspaces';
 
-export const SHAREABLE_APP_NAMES = ['tasks', 'shopping', 'payments'] as const;
+export const SHAREABLE_APP_NAMES = WORKSPACE_APP_NAMES;
 export type ShareableAppName = (typeof SHAREABLE_APP_NAMES)[number];
 export type AppSharingRole = 'view' | 'edit';
 export type AppInvitationStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'revoked';
 export type AppSharingRoles = Partial<Record<ShareableAppName, AppSharingRole>>;
+export type AppWorkspaceIds = Partial<Record<ShareableAppName, string>>;
 
 export interface AppInvitation {
   id: string;
   familyId: string;
+  workspaceIds: AppWorkspaceIds;
   fromUid: string;
   fromEmail: string;
   toUid: string;
@@ -41,8 +51,6 @@ export interface InvitationTarget {
 
 const db = () => getFirebaseFirestore();
 const invitationsCollection = () => collection(db(), 'appInvitations');
-const familyAccessPath = (familyId: string, appName: ShareableAppName, uid: string) =>
-  `families/${familyId}/appAccess/${appName}/members/${uid}`;
 
 function asDate(value: unknown): Date | null {
   if (value instanceof Date) return value;
@@ -57,15 +65,22 @@ function mapInvitation(id: string, data: Record<string, unknown>): AppInvitation
     ? data.apps as Record<string, unknown>
     : {};
   const apps: AppSharingRoles = {};
+  const rawWorkspaceIds = data.workspaceIds && typeof data.workspaceIds === 'object'
+    ? data.workspaceIds as Record<string, unknown>
+    : {};
+  const workspaceIds: AppWorkspaceIds = {};
   SHAREABLE_APP_NAMES.forEach((appName) => {
     const role = rawApps[appName];
     if (role === 'view' || role === 'edit') apps[appName] = role;
+    const workspaceId = rawWorkspaceIds[appName];
+    if (typeof workspaceId === 'string' && workspaceId) workspaceIds[appName] = workspaceId;
   });
 
   const status = data.status;
   return {
     id,
     familyId: String(data.familyId ?? getDefaultFamilyId()),
+    workspaceIds,
     fromUid: String(data.fromUid ?? ''),
     fromEmail: String(data.fromEmail ?? ''),
     toUid: String(data.toUid ?? ''),
@@ -77,6 +92,10 @@ function mapInvitation(id: string, data: Record<string, unknown>): AppInvitation
     createdAt: asDate(data.createdAt),
     respondedAt: asDate(data.respondedAt),
   };
+}
+
+function invitationWorkspace(invitation: AppInvitation, appName: ShareableAppName): string {
+  return invitation.workspaceIds[appName] ?? invitation.familyId;
 }
 
 export async function findInvitationTarget(login: string, currentUid: string): Promise<InvitationTarget | null> {
@@ -128,9 +147,22 @@ export async function sendAppInvitation(
   if (!Object.keys(selectedApps).length) throw new Error('Выберите хотя бы одно приложение.');
   if (target.uid === fromUid) throw new Error('Нельзя пригласить собственный аккаунт.');
 
+  const selectedNames = SHAREABLE_APP_NAMES.filter((appName) => selectedApps[appName]);
+  const resolved = await Promise.all(selectedNames.map(async (appName) => ({
+    appName,
+    workspace: await resolveAppWorkspace(fromUid, appName),
+  })));
+  const denied = resolved.find(({ workspace }) => workspace.role !== 'edit');
+  if (denied) throw new Error('Приглашать пользователей может только участник с правом редактирования.');
+  const workspaceIds = Object.fromEntries(
+    resolved.map(({ appName, workspace }) => [appName, workspace.familyId]),
+  ) as AppWorkspaceIds;
+  const primaryFamilyId = resolved[0]?.workspace.familyId ?? personalWorkspaceId(fromUid);
+
   const reference = doc(invitationsCollection());
   await setDoc(reference, {
-    familyId: getDefaultFamilyId(),
+    familyId: primaryFamilyId,
+    workspaceIds,
     fromUid,
     fromEmail: fromEmail.trim().toLocaleLowerCase(),
     toUid: target.uid,
@@ -159,14 +191,12 @@ export async function respondToAppInvitation(
       throw new Error('Это приглашение уже обработано или адресовано другому аккаунту.');
     }
 
-    const familyMemberRef = doc(firestore, familyMemberPath(invitation.familyId, uid));
-    const familyMemberSnapshot = await transaction.get(familyMemberRef);
-    if (accept && familyMemberSnapshot.exists()) {
-      throw new Error('Этот пользователь уже состоит в общем пространстве приложений.');
-    }
-    const accessRefs = SHAREABLE_APP_NAMES.map((appName) =>
-      doc(firestore, familyAccessPath(invitation.familyId, appName, uid)),
-    );
+    const selectedApps = SHAREABLE_APP_NAMES.filter((appName) => invitation.apps[appName]);
+    const workspaceIds = [...new Set(selectedApps.map((appName) => invitationWorkspace(invitation, appName)))];
+    const memberRefs = workspaceIds.map((familyId) => doc(firestore, familyMemberPath(familyId, uid)));
+    const memberSnapshots = accept
+      ? await Promise.all(memberRefs.map((reference) => transaction.get(reference)))
+      : [];
     const now = serverTimestamp();
 
     transaction.update(invitationRef, {
@@ -177,27 +207,34 @@ export async function respondToAppInvitation(
 
     if (!accept) return;
 
-    transaction.set(familyMemberRef, {
-      uid,
-      email: invitation.toEmail,
-      role: 'member',
-      source: 'invitation',
-      accessVersion: 1,
-      invitationId,
-      joinedAt: familyMemberSnapshot.data()?.joinedAt ?? now,
-    }, { merge: true });
-
-    accessRefs.forEach((reference, index) => {
-      const appName = SHAREABLE_APP_NAMES[index];
-      if (!appName) return;
-      const role = invitation.apps[appName] ?? 'none';
+    memberRefs.forEach((reference, index) => {
+      if (memberSnapshots[index]?.exists()) return;
       transaction.set(reference, {
+        uid,
+        email: invitation.toEmail,
+        role: 'member',
+        source: 'invitation',
+        accessVersion: 1,
+        invitationId,
+        joinedAt: now,
+      });
+    });
+
+    selectedApps.forEach((appName) => {
+      const familyId = invitationWorkspace(invitation, appName);
+      const role = invitation.apps[appName]!;
+      transaction.set(doc(firestore, familyAccessPath(familyId, appName, uid)), {
         uid,
         role,
         source: 'invitation',
         invitationId,
         updatedAt: now,
-      }, { merge: false });
+      });
+      transaction.set(doc(firestore, appWorkspacePath(uid, appName)), {
+        familyId,
+        source: 'shared',
+        updatedAt: now,
+      });
     });
   });
 }
@@ -215,6 +252,18 @@ export async function cancelAppInvitation(uid: string, invitationId: string): Pr
     }
     if (invitation.status !== 'pending' && invitation.status !== 'accepted') return;
 
+    const selectedApps = SHAREABLE_APP_NAMES.filter((appName) => invitation.apps[appName]);
+    const workspaceIds = [...new Set(selectedApps.map((appName) => invitationWorkspace(invitation, appName)))];
+    const allWorkspaceAccess = invitation.status === 'accepted'
+      ? await Promise.all(workspaceIds.map(async (familyId) => ({
+        familyId,
+        snapshots: await Promise.all(SHAREABLE_APP_NAMES.map((appName) => transaction.get(
+          doc(firestore, familyAccessPath(familyId, appName, invitation.toUid)),
+        ))),
+        member: await transaction.get(doc(firestore, familyMemberPath(familyId, invitation.toUid))),
+      })))
+      : [];
+
     transaction.update(invitationRef, {
       status: invitation.status === 'pending' ? 'cancelled' : 'revoked',
       respondedAt: serverTimestamp(),
@@ -222,7 +271,35 @@ export async function cancelAppInvitation(uid: string, invitationId: string): Pr
     });
 
     if (invitation.status === 'accepted') {
-      transaction.delete(doc(firestore, familyMemberPath(invitation.familyId, invitation.toUid)));
+      selectedApps.forEach((appName) => {
+        const familyId = invitationWorkspace(invitation, appName);
+        const workspace = allWorkspaceAccess.find((entry) => entry.familyId === familyId);
+        const access = workspace?.snapshots[SHAREABLE_APP_NAMES.indexOf(appName)];
+        if (access?.data()?.invitationId === invitationId) {
+          transaction.delete(doc(firestore, familyAccessPath(familyId, appName, invitation.toUid)));
+        }
+        if (uid === invitation.toUid) {
+          transaction.set(doc(firestore, appWorkspacePath(invitation.toUid, appName)), {
+            familyId: personalWorkspaceId(invitation.toUid),
+            source: 'personal',
+            updatedAt: serverTimestamp(),
+          });
+        }
+      });
+      allWorkspaceAccess.forEach(({ familyId, snapshots, member }) => {
+        const hasRemainingAccess = snapshots.some((snapshot, index) => {
+          if (!snapshot.exists()) return false;
+          const appName = SHAREABLE_APP_NAMES[index]!;
+          const removedByThisInvitation = selectedApps.includes(appName)
+            && invitationWorkspace(invitation, appName) === familyId
+            && snapshot.data().invitationId === invitationId;
+          return !removedByThisInvitation
+            && (snapshot.data().role === 'view' || snapshot.data().role === 'edit');
+        });
+        if (!hasRemainingAccess && member.data()?.invitationId === invitationId) {
+          transaction.delete(member.ref);
+        }
+      });
     }
   });
 }
@@ -247,7 +324,12 @@ export async function getFamilyAppRole(
     const inviteSnapshot = await getDoc(doc(firestore, 'appInvitations', access.invitationId));
     if (!inviteSnapshot.exists()) return null;
     const invite = mapInvitation(inviteSnapshot.id, inviteSnapshot.data());
-    if (invite.status !== 'accepted' || invite.toUid !== uid || invite.apps[appName] !== access.role) {
+    if (
+      invite.status !== 'accepted'
+      || invite.toUid !== uid
+      || invite.apps[appName] !== access.role
+      || invitationWorkspace(invite, appName) !== familyId
+    ) {
       return null;
     }
   }
@@ -277,9 +359,12 @@ export async function migrateLegacyFamilyAccess(
   );
   const accessSnapshots = await Promise.all(references.map((reference) => getDoc(reference)));
 
-  for (let start = 0; start < legacyMembers.length; start += 140) {
+  // Five writes per legacy member at most: member metadata plus four app grants.
+  // Stay safely below Firestore's 500-operation batch limit.
+  const membersPerBatch = 90;
+  for (let start = 0; start < legacyMembers.length; start += membersPerBatch) {
     const batch = writeBatch(firestore);
-    const members = legacyMembers.slice(start, start + 140);
+    const members = legacyMembers.slice(start, start + membersPerBatch);
     members.forEach((member, index) => {
       if (member.data().accessVersion === undefined) {
         batch.set(member.ref, { source: 'legacy', accessVersion: 1 }, { merge: true });
@@ -309,6 +394,7 @@ export async function migrateLegacyFamilyAccess(
 
 export async function leaveLegacyFamily(uid: string, familyId = getDefaultFamilyId()): Promise<void> {
   const firestore = db();
+  await ensureUserWorkspaces(uid, '');
   const memberRef = doc(firestore, familyMemberPath(familyId, uid));
   const memberSnapshot = await getDoc(memberRef);
   if (!memberSnapshot.exists() || memberSnapshot.data().source !== 'legacy') {
@@ -319,6 +405,11 @@ export async function leaveLegacyFamily(uid: string, familyId = getDefaultFamily
   batch.delete(memberRef);
   SHAREABLE_APP_NAMES.forEach((appName) => {
     batch.delete(doc(firestore, familyAccessPath(familyId, appName, uid)));
+    batch.set(doc(firestore, appWorkspacePath(uid, appName)), {
+      familyId: personalWorkspaceId(uid),
+      source: 'personal',
+      updatedAt: serverTimestamp(),
+    });
   });
   await batch.commit();
 }

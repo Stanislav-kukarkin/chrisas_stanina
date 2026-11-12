@@ -65,17 +65,11 @@ export function SettingsModal({
   onClose,
   onSave,
 }: SettingsModalProps) {
-  const [draft, setDraft] = useState(draftSettings);
-  const [rememberChoice, setRememberChoice] = useState(true);
+  const [draft, setDraft] = useState(() => draftSettings);
+  const [rememberChoice, setRememberChoice] = useState(() =>
+    getRememberSettingsPreference(userId),
+  );
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setDraft(draftSettings);
-      setRememberChoice(getRememberSettingsPreference(userId));
-      setError(null);
-    }
-  }, [draftSettings, open, userId]);
 
   useEffect(() => {
     if (!open) {
@@ -95,15 +89,25 @@ export function SettingsModal({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    setError(null);
     const validationError = validateSettings(draft);
     if (validationError) {
       setError(validationError);
       return;
     }
 
-    setRememberSettingsPreference(userId, rememberChoice);
-    await onSave(draft, { remember: rememberChoice });
-    onClose();
+    try {
+      await onSave(draft, { remember: rememberChoice });
+      setRememberSettingsPreference(userId, rememberChoice);
+      onClose();
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : String(saveError);
+      setError(
+        message.includes('permission-denied') || message.includes('Missing or insufficient permissions')
+          ? 'Не удалось сохранить настройки: нет доступа к выбранному пространству Salary Flow.'
+          : `Не удалось сохранить настройки: ${message}`,
+      );
+    }
   }
 
   return createPortal(

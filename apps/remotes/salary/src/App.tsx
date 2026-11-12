@@ -13,6 +13,7 @@ import {
 import {
   getFirebaseConfigFromEnv,
   initializeFirebase,
+  useFamilyAppAccess,
   useFirebaseUser,
   useSalarySettings,
   useUpdateSalarySettings,
@@ -35,12 +36,18 @@ initializeFirebase(getFirebaseConfigFromEnv());
 
 export default function App() {
   const user = useFirebaseUser();
-  const { data: persistedSettings, isLoading: settingsLoading } = useSalarySettings(user?.uid);
+  const access = useFamilyAppAccess(user?.uid, 'salary');
+  const familyId = access.familyId;
+  const { data: persistedSettings, isLoading: settingsLoading } = useSalarySettings(
+    user?.uid,
+    familyId,
+    access.canView,
+  );
   const sessionSettings = useSalaryUiStore((store) => store.sessionSettings);
   const setSessionSettings = useSalaryUiStore((store) => store.setSessionSettings);
   const rawSettings = sessionSettings ?? persistedSettings ?? DEFAULT_SALARY_SETTINGS;
   const settings = useMemo(() => resolveSalarySettings(rawSettings), [rawSettings]);
-  const updateSettings = useUpdateSalarySettings(user?.uid);
+  const updateSettings = useUpdateSalarySettings(user?.uid, familyId);
   const { data: calendar, isLoading: calendarLoading } = useProductionCalendar();
   const state = useSalaryTicker(settings, calendar);
   const period = useSalaryUiStore((store) => store.period);
@@ -53,7 +60,7 @@ export default function App() {
   const setViewMonth = useSalaryUiStore((store) => store.setViewMonth);
   const shiftViewMonth = useSalaryUiStore((store) => store.shiftViewMonth);
 
-  const todayIso = getDateIsoInTimezone(Date.now(), settings.timezone);
+  const todayIso = getDateIsoInTimezone(state?.timestamp ?? 0, settings.timezone);
   const currentYearMonth = todayIso.slice(0, 7);
   const activeYearMonth = viewMonth || currentYearMonth;
 
@@ -75,15 +82,28 @@ export default function App() {
     if (!calendar) {
       return null;
     }
-    return buildMonthViewStats(settings, calendar, activeYearMonth, Date.now());
-  }, [activeYearMonth, calendar, settings]);
+    return buildMonthViewStats(settings, calendar, activeYearMonth, state?.timestamp ?? 0);
+  }, [activeYearMonth, calendar, settings, state?.timestamp]);
 
-  if (settingsLoading || calendarLoading || !state || !calendar) {
+  if (access.isLoading || settingsLoading || calendarLoading || !state || !calendar) {
     return (
       <div className="relative flex min-h-full flex-1 flex-col overflow-hidden">
         <Aurora />
         <div className="relative z-10 flex flex-1 items-center justify-center text-zinc-400">
           Загрузка Salary Flow...
+        </div>
+      </div>
+    );
+  }
+
+  if (access.isError || !access.canView || !familyId) {
+    return (
+      <div className="relative flex min-h-full flex-1 flex-col overflow-hidden">
+        <Aurora />
+        <div className="relative z-10 flex flex-1 items-center justify-center px-6 text-center text-rose-200">
+          {access.error instanceof Error
+            ? access.error.message
+            : 'Нет доступа к пространству Salary Flow.'}
         </div>
       </div>
     );
@@ -102,7 +122,8 @@ export default function App() {
           <button
             type="button"
             onClick={openSettings}
-            className="self-start rounded-xl border border-zinc-700 bg-zinc-900/70 px-4 py-2 text-sm text-zinc-300 hover:border-teal-500/40 hover:text-teal-200"
+            disabled={!access.canEdit}
+            className="self-start rounded-xl border border-zinc-700 bg-zinc-900/70 px-4 py-2 text-sm text-zinc-300 hover:border-teal-500/40 hover:text-teal-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Настройки
           </button>
@@ -163,22 +184,27 @@ export default function App() {
         <HowItWorksSection settings={settings} state={state} />
       </div>
 
-      <SettingsModal
-        open={settingsOpen}
-        draftSettings={rawSettings}
-        userId={user?.uid}
-        isSaving={updateSettings.isPending}
-        onClose={closeSettings}
-        onSave={async (update, { remember }) => {
-          if (remember) {
-            await updateSettings.mutateAsync(update);
-            setSessionSettings(null);
-            return;
-          }
+      {settingsOpen && (
+        <SettingsModal
+          open
+          draftSettings={rawSettings}
+          userId={user?.uid}
+          isSaving={updateSettings.isPending}
+          onClose={closeSettings}
+          onSave={async (update, { remember }) => {
+            if (remember) {
+              if (!access.canEdit) {
+                throw new Error('Для изменения настроек нужен доступ на редактирование.');
+              }
+              await updateSettings.mutateAsync(update);
+              setSessionSettings(null);
+              return;
+            }
 
-          setSessionSettings({ ...update, source: update.source ?? 'personal' });
-        }}
-      />
+            setSessionSettings({ ...update, source: update.source ?? 'personal' });
+          }}
+        />
+      )}
 
       <SalaryImmersiveView
         open={immersiveOpen}
