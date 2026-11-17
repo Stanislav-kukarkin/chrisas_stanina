@@ -39,7 +39,7 @@ service cloud.firestore {
     }
 
     function isShareableApp(appName) {
-      return appName in ['tasks', 'shopping', 'salary', 'payments'];
+      return appName in ['tasks', 'shopping', 'recipes', 'salary', 'payments'];
     }
 
     function isLegacyMember(familyId, uid) {
@@ -77,6 +77,8 @@ service cloud.firestore {
             && invitationWorkspace(getAfter(path).data, 'tasks') == familyId)
           || ('shopping' in getAfter(path).data.apps
             && invitationWorkspace(getAfter(path).data, 'shopping') == familyId)
+          || ('recipes' in getAfter(path).data.apps
+            && invitationWorkspace(getAfter(path).data, 'recipes') == familyId)
           || ('salary' in getAfter(path).data.apps
             && invitationWorkspace(getAfter(path).data, 'salary') == familyId)
           || ('payments' in getAfter(path).data.apps
@@ -183,6 +185,29 @@ service cloud.firestore {
         && (!('streakFreezes' in data) || (data.streakFreezes is number && data.streakFreezes >= 0));
     }
 
+    function validRecipe(data) {
+      return data.keys().hasOnly([
+          'title', 'description', 'servings', 'prepMinutes', 'cookMinutes',
+          'ingredients', 'steps', 'sourceUrl', 'favorite', 'authorId',
+          'createdAt', 'updatedAt'
+        ])
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 180
+        && data.authorId is string
+        && data.authorId.size() > 0
+        && data.ingredients is list
+        && data.ingredients.size() > 0
+        && data.ingredients.size() <= 100
+        && data.steps is list
+        && data.steps.size() > 0
+        && data.steps.size() <= 100
+        && data.favorite is bool
+        && (data.servings == null || (data.servings is number && data.servings > 0))
+        && (data.prepMinutes == null || (data.prepMinutes is number && data.prepMinutes >= 0))
+        && (data.cookMinutes == null || (data.cookMinutes is number && data.cookMinutes >= 0));
+    }
+
     function validCoinTransaction(data, uid) {
       return data.keys().hasOnly(['userId', 'type', 'amount', 'referenceId', 'createdAt'])
         && data.userId == uid
@@ -194,26 +219,30 @@ service cloud.firestore {
     function validInvitationAppSelection(data) {
       return data.apps is map
         && data.apps.size() > 0
-        && data.apps.keys().hasOnly(['tasks', 'shopping', 'salary', 'payments'])
+        && data.apps.keys().hasOnly(['tasks', 'shopping', 'recipes', 'salary', 'payments'])
         && (!('tasks' in data.apps) || data.apps.tasks in ['view', 'edit'])
         && (!('shopping' in data.apps) || data.apps.shopping in ['view', 'edit'])
+        && (!('recipes' in data.apps) || data.apps.recipes in ['view', 'edit'])
         && (!('salary' in data.apps) || data.apps.salary in ['view', 'edit'])
         && (!('payments' in data.apps) || data.apps.payments in ['view', 'edit']);
     }
 
     function validInvitationWorkspaces(data) {
       return data.workspaceIds is map
-        && data.workspaceIds.keys().hasOnly(['tasks', 'shopping', 'salary', 'payments'])
+        && data.workspaceIds.keys().hasOnly(['tasks', 'shopping', 'recipes', 'salary', 'payments'])
         && (!('tasks' in data.apps)
           || ('tasks' in data.workspaceIds && data.workspaceIds.tasks is string))
         && (!('shopping' in data.apps)
           || ('shopping' in data.workspaceIds && data.workspaceIds.shopping is string))
+        && (!('recipes' in data.apps)
+          || ('recipes' in data.workspaceIds && data.workspaceIds.recipes is string))
         && (!('salary' in data.apps)
           || ('salary' in data.workspaceIds && data.workspaceIds.salary is string))
         && (!('payments' in data.apps)
           || ('payments' in data.workspaceIds && data.workspaceIds.payments is string))
         && (!('tasks' in data.workspaceIds) || 'tasks' in data.apps)
         && (!('shopping' in data.workspaceIds) || 'shopping' in data.apps)
+        && (!('recipes' in data.workspaceIds) || 'recipes' in data.apps)
         && (!('salary' in data.workspaceIds) || 'salary' in data.apps)
         && (!('payments' in data.workspaceIds) || 'payments' in data.apps);
     }
@@ -307,6 +336,8 @@ service cloud.firestore {
           || canEditApp(invitationWorkspace(request.resource.data, 'tasks'), 'tasks'))
         && (!('shopping' in request.resource.data.apps)
           || canEditApp(invitationWorkspace(request.resource.data, 'shopping'), 'shopping'))
+        && (!('recipes' in request.resource.data.apps)
+          || canEditApp(invitationWorkspace(request.resource.data, 'recipes'), 'recipes'))
         && (!('salary' in request.resource.data.apps)
           || canEditApp(invitationWorkspace(request.resource.data, 'salary'), 'salary'))
         && (!('payments' in request.resource.data.apps)
@@ -460,12 +491,25 @@ service cloud.firestore {
           && canEditApp(familyId, 'tasks');
       }
 
+      match /apps/recipes/recipes/{recipeId} {
+        allow read: if canReadApp(familyId, 'recipes');
+        allow create: if canEditApp(familyId, 'recipes')
+          && request.resource.data.authorId == request.auth.uid
+          && validRecipe(request.resource.data);
+        allow update: if canEditApp(familyId, 'recipes')
+          && request.resource.data.authorId == resource.data.authorId
+          && validRecipe(request.resource.data);
+        allow delete: if canEditApp(familyId, 'recipes');
+      }
+
       match /apps/{appName}/{document=**} {
         allow read: if appName != 'tasks'
           && appName != 'salary'
+          && appName != 'recipes'
           && canReadApp(familyId, appName);
         allow create, update, delete: if appName != 'tasks'
           && appName != 'salary'
+          && appName != 'recipes'
           && canEditApp(familyId, appName);
       }
     }

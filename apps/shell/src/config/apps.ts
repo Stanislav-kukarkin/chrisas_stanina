@@ -15,6 +15,7 @@ export interface AppCard {
 export const VISIBLE_APP_IDS = [
   'tasks',
   'shopping',
+  'recipes',
   'salary',
   'payments',
   'cashback-wallpapers',

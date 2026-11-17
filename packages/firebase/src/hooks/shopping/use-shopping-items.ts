@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { getDefaultFamilyId } from '../../config';
 import { getFirebaseFirestore } from '../../init';
-import { shoppingItemPath, shoppingItemsCollectionPath } from '../../paths';
+import { shoppingListItemPath, shoppingListItemsCollectionPath } from '../../paths';
 import { queryKeys } from '../../query-keys';
 import {
   type ShoppingItem,
@@ -34,13 +34,13 @@ function sortItems(items: ShoppingItem[]): ShoppingItem[] {
   });
 }
 
-export function useShoppingItems(familyId: string = getDefaultFamilyId(), enabled = true) {
+export function useShoppingItems(familyId: string = getDefaultFamilyId(), enabled = true, listId = 'main') {
   return useQuery({
-    queryKey: queryKeys.shoppingItems(familyId),
+    queryKey: queryKeys.shoppingItems(familyId, listId),
     enabled,
     queryFn: async (): Promise<ShoppingItem[]> => {
       const firestore = getFirebaseFirestore();
-      const snapshot = await getDocs(collection(firestore, shoppingItemsCollectionPath(familyId)));
+      const snapshot = await getDocs(collection(firestore, shoppingListItemsCollectionPath(familyId, listId)));
       const items = snapshot.docs.map((itemDoc) =>
         mapShoppingItem(itemDoc.id, itemDoc.data()),
       );
@@ -49,7 +49,7 @@ export function useShoppingItems(familyId: string = getDefaultFamilyId(), enable
   });
 }
 
-export function useAddShoppingItem(familyId: string = getDefaultFamilyId()) {
+export function useAddShoppingItem(familyId: string = getDefaultFamilyId(), listId = 'main') {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -61,9 +61,9 @@ export function useAddShoppingItem(familyId: string = getDefaultFamilyId()) {
       createdBy: string;
     }) => {
       const firestore = getFirebaseFirestore();
-      const docRef = await addDoc(collection(firestore, shoppingItemsCollectionPath(familyId)), {
+      const docRef = await addDoc(collection(firestore, shoppingListItemsCollectionPath(familyId, listId)), {
         name: input.name.trim(),
-        quantity: input.quantity ?? 1,
+        quantity: input.quantity === undefined ? 1 : input.quantity,
         unit: input.unit ?? 'шт',
         category: input.category ?? null,
         note: input.note ?? null,
@@ -79,12 +79,12 @@ export function useAddShoppingItem(familyId: string = getDefaultFamilyId()) {
       return docRef.id;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId, listId) });
     },
   });
 }
 
-export function useUpdateShoppingItem(familyId: string = getDefaultFamilyId()) {
+export function useUpdateShoppingItem(familyId: string = getDefaultFamilyId(), listId = 'main') {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -96,49 +96,49 @@ export function useUpdateShoppingItem(familyId: string = getDefaultFamilyId()) {
       update: ShoppingItemUpdate;
     }) => {
       const firestore = getFirebaseFirestore();
-      await updateDoc(doc(firestore, shoppingItemPath(familyId, itemId)), {
+      await updateDoc(doc(firestore, shoppingListItemPath(familyId, listId, itemId)), {
         ...update,
         updatedAt: serverTimestamp(),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId, listId) });
     },
   });
 }
 
-export function useToggleShoppingItem(familyId: string = getDefaultFamilyId()) {
+export function useToggleShoppingItem(familyId: string = getDefaultFamilyId(), listId = 'main') {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ itemId, checked }: { itemId: string; checked: boolean }) => {
       const firestore = getFirebaseFirestore();
-      await updateDoc(doc(firestore, shoppingItemPath(familyId, itemId)), {
+      await updateDoc(doc(firestore, shoppingListItemPath(familyId, listId, itemId)), {
         checked,
         updatedAt: serverTimestamp(),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId, listId) });
     },
   });
 }
 
-export function useDeleteShoppingItem(familyId: string = getDefaultFamilyId()) {
+export function useDeleteShoppingItem(familyId: string = getDefaultFamilyId(), listId = 'main') {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (itemId: string) => {
       const firestore = getFirebaseFirestore();
-      await deleteDoc(doc(firestore, shoppingItemPath(familyId, itemId)));
+      await deleteDoc(doc(firestore, shoppingListItemPath(familyId, listId, itemId)));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId, listId) });
     },
   });
 }
 
-export function useClearCheckedItems(familyId: string = getDefaultFamilyId()) {
+export function useClearCheckedItems(familyId: string = getDefaultFamilyId(), listId = 'main') {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -151,13 +151,13 @@ export function useClearCheckedItems(familyId: string = getDefaultFamilyId()) {
       const batch = writeBatch(firestore);
 
       checkedItemIds.forEach((itemId) => {
-        batch.delete(doc(firestore, shoppingItemPath(familyId, itemId)));
+        batch.delete(doc(firestore, shoppingListItemPath(familyId, listId, itemId)));
       });
 
       await batch.commit();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(familyId, listId) });
     },
   });
 }

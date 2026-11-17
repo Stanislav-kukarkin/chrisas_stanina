@@ -32,6 +32,24 @@ export function shoppingItemsCollectionPath(familyId: string): string {
   return `${familyAppCollectionPath(familyId, 'shopping')}/items`;
 }
 
+export function shoppingListsCollectionPath(familyId: string): string {
+  return `${familyAppCollectionPath(familyId, 'shopping')}/lists`;
+}
+
+export function shoppingListPath(familyId: string, listId: string): string {
+  return `${shoppingListsCollectionPath(familyId)}/${listId}`;
+}
+
+export function shoppingListItemsCollectionPath(familyId: string, listId: string): string {
+  return listId === 'main'
+    ? shoppingItemsCollectionPath(familyId)
+    : `${shoppingListPath(familyId, listId)}/items`;
+}
+
+export function shoppingListItemPath(familyId: string, listId: string, itemId: string): string {
+  return `${shoppingListItemsCollectionPath(familyId, listId)}/${itemId}`;
+}
+
 export function shoppingItemPath(familyId: string, itemId: string): string {
   return `${shoppingItemsCollectionPath(familyId)}/${itemId}`;
 }
@@ -50,4 +68,12 @@ export function salarySettingsCollectionPath(familyId: string): string {
 
 export function salarySettingsPath(familyId: string, uid: string): string {
   return `${salarySettingsCollectionPath(familyId)}/${uid}`;
+}
+
+export function recipesCollectionPath(familyId: string): string {
+  return `${familyAppCollectionPath(familyId, 'recipes')}/recipes`;
+}
+
+export function recipePath(familyId: string, recipeId: string): string {
+  return `${recipesCollectionPath(familyId)}/${recipeId}`;
 }

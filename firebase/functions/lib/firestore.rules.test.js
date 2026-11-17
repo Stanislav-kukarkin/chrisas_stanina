@@ -22,6 +22,8 @@ suite('firestore tasks access rules', () => {
             await (0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, 'families/family/appAccess/tasks/members/viewer'), { role: 'view' });
             await (0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, 'families/family/appAccess/salary/members/editor'), { role: 'edit' });
             await (0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, 'families/family/appAccess/salary/members/viewer'), { role: 'view' });
+            await (0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, 'families/family/appAccess/recipes/members/editor'), { role: 'edit' });
+            await (0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, 'families/family/appAccess/recipes/members/viewer'), { role: 'view' });
             await (0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, 'families/family/apps/tasks/tasks/existing'), validTask('editor'));
         });
     });
@@ -54,6 +56,13 @@ suite('firestore tasks access rules', () => {
             kind: 'title', name: 'Подмена', quantity: 99,
         }));
     });
+    (0, vitest_1.it)('allows recipe editors to save recipes and keeps viewers read-only', async () => {
+        const editor = environment.authenticatedContext('editor').firestore();
+        const viewer = environment.authenticatedContext('viewer').firestore();
+        await (0, rules_unit_testing_1.assertSucceeds)((0, firestore_1.setDoc)((0, firestore_1.doc)(editor, 'families/family/apps/recipes/recipes/pancakes'), validRecipe('editor')));
+        await (0, rules_unit_testing_1.assertSucceeds)((0, firestore_1.getDoc)((0, firestore_1.doc)(viewer, 'families/family/apps/recipes/recipes/pancakes')));
+        await (0, rules_unit_testing_1.assertFails)((0, firestore_1.setDoc)((0, firestore_1.doc)(viewer, 'families/family/apps/recipes/recipes/forbidden'), validRecipe('viewer')));
+    });
     (0, vitest_1.it)('lets a new account bootstrap its own isolated app workspace', async () => {
         const uid = 'solo-user';
         const familyId = `personal-${uid}`;
@@ -85,6 +94,12 @@ suite('firestore tasks access rules', () => {
             source: 'personal',
             updatedAt: (0, firestore_1.serverTimestamp)(),
         });
+        batch.set((0, firestore_1.doc)(firestore, `families/${familyId}/appAccess/recipes/members/${uid}`), {
+            uid,
+            role: 'edit',
+            source: 'personal',
+            updatedAt: (0, firestore_1.serverTimestamp)(),
+        });
         batch.set((0, firestore_1.doc)(firestore, `users/${uid}/appWorkspaces/tasks`), {
             familyId,
             source: 'personal',
@@ -95,9 +110,15 @@ suite('firestore tasks access rules', () => {
             source: 'personal',
             updatedAt: (0, firestore_1.serverTimestamp)(),
         });
+        batch.set((0, firestore_1.doc)(firestore, `users/${uid}/appWorkspaces/recipes`), {
+            familyId,
+            source: 'personal',
+            updatedAt: (0, firestore_1.serverTimestamp)(),
+        });
         await (0, rules_unit_testing_1.assertSucceeds)(batch.commit());
         await (0, rules_unit_testing_1.assertSucceeds)((0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, `families/${familyId}/apps/tasks/tasks/first`), validTask(uid)));
         await (0, rules_unit_testing_1.assertSucceeds)((0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, `families/${familyId}/apps/salary/settings/${uid}`), { monthlySalary: 100_000 }));
+        await (0, rules_unit_testing_1.assertSucceeds)((0, firestore_1.setDoc)((0, firestore_1.doc)(firestore, `families/${familyId}/apps/recipes/recipes/first`), validRecipe(uid)));
         const outsider = environment.authenticatedContext('another-user').firestore();
         await (0, rules_unit_testing_1.assertFails)((0, firestore_1.getDoc)((0, firestore_1.doc)(outsider, `families/${familyId}/apps/tasks/tasks/first`)));
         await (0, rules_unit_testing_1.assertFails)((0, firestore_1.getDoc)((0, firestore_1.doc)(outsider, `families/${familyId}/apps/salary/settings/${uid}`)));
@@ -183,6 +204,22 @@ suite('firestore tasks access rules', () => {
         await (0, rules_unit_testing_1.assertFails)((0, firestore_1.getDoc)((0, firestore_1.doc)(bob, 'families/personal-alice/apps/salary/settings/alice')));
     });
 });
+function validRecipe(authorId) {
+    return {
+        title: 'Блины',
+        description: null,
+        servings: 4,
+        prepMinutes: 10,
+        cookMinutes: 20,
+        ingredients: [{ id: 'flour', name: 'Мука', quantity: 500, unit: 'г', note: null }],
+        steps: ['Смешать', 'Обжарить'],
+        sourceUrl: null,
+        favorite: false,
+        authorId,
+        createdAt: (0, firestore_1.serverTimestamp)(),
+        updatedAt: (0, firestore_1.serverTimestamp)(),
+    };
+}
 function validTask(authorId) {
     return {
         title: 'Задача',

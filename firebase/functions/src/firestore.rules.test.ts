@@ -28,6 +28,8 @@ suite('firestore tasks access rules', () => {
       await setDoc(doc(firestore, 'families/family/appAccess/tasks/members/viewer'), { role: 'view' });
       await setDoc(doc(firestore, 'families/family/appAccess/salary/members/editor'), { role: 'edit' });
       await setDoc(doc(firestore, 'families/family/appAccess/salary/members/viewer'), { role: 'view' });
+      await setDoc(doc(firestore, 'families/family/appAccess/recipes/members/editor'), { role: 'edit' });
+      await setDoc(doc(firestore, 'families/family/appAccess/recipes/members/viewer'), { role: 'view' });
       await setDoc(doc(firestore, 'families/family/apps/tasks/tasks/existing'), validTask('editor'));
     });
   });
@@ -66,6 +68,20 @@ suite('firestore tasks access rules', () => {
     }));
   });
 
+  it('allows recipe editors to save recipes and keeps viewers read-only', async () => {
+    const editor = environment.authenticatedContext('editor').firestore();
+    const viewer = environment.authenticatedContext('viewer').firestore();
+    await assertSucceeds(setDoc(
+      doc(editor, 'families/family/apps/recipes/recipes/pancakes'),
+      validRecipe('editor'),
+    ));
+    await assertSucceeds(getDoc(doc(viewer, 'families/family/apps/recipes/recipes/pancakes')));
+    await assertFails(setDoc(
+      doc(viewer, 'families/family/apps/recipes/recipes/forbidden'),
+      validRecipe('viewer'),
+    ));
+  });
+
   it('lets a new account bootstrap its own isolated app workspace', async () => {
     const uid = 'solo-user';
     const familyId = `personal-${uid}`;
@@ -97,12 +113,23 @@ suite('firestore tasks access rules', () => {
       source: 'personal',
       updatedAt: serverTimestamp(),
     });
+    batch.set(doc(firestore, `families/${familyId}/appAccess/recipes/members/${uid}`), {
+      uid,
+      role: 'edit',
+      source: 'personal',
+      updatedAt: serverTimestamp(),
+    });
     batch.set(doc(firestore, `users/${uid}/appWorkspaces/tasks`), {
       familyId,
       source: 'personal',
       updatedAt: serverTimestamp(),
     });
     batch.set(doc(firestore, `users/${uid}/appWorkspaces/salary`), {
+      familyId,
+      source: 'personal',
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(doc(firestore, `users/${uid}/appWorkspaces/recipes`), {
       familyId,
       source: 'personal',
       updatedAt: serverTimestamp(),
@@ -116,6 +143,10 @@ suite('firestore tasks access rules', () => {
     await assertSucceeds(setDoc(
       doc(firestore, `families/${familyId}/apps/salary/settings/${uid}`),
       { monthlySalary: 100_000 },
+    ));
+    await assertSucceeds(setDoc(
+      doc(firestore, `families/${familyId}/apps/recipes/recipes/first`),
+      validRecipe(uid),
     ));
     const outsider = environment.authenticatedContext('another-user').firestore();
     await assertFails(getDoc(doc(outsider, `families/${familyId}/apps/tasks/tasks/first`)));
@@ -216,6 +247,23 @@ suite('firestore tasks access rules', () => {
     await assertFails(getDoc(doc(bob, 'families/personal-alice/apps/salary/settings/alice')));
   });
 });
+
+function validRecipe(authorId: string) {
+  return {
+    title: 'Блины',
+    description: null,
+    servings: 4,
+    prepMinutes: 10,
+    cookMinutes: 20,
+    ingredients: [{ id: 'flour', name: 'Мука', quantity: 500, unit: 'г', note: null }],
+    steps: ['Смешать', 'Обжарить'],
+    sourceUrl: null,
+    favorite: false,
+    authorId,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
 
 function validTask(authorId: string) {
   return {

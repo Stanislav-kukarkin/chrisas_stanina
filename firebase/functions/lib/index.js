@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.tasksCommand = void 0;
+exports.parseRecipeUrl = exports.shoppingResolveImport = exports.shoppingImport = exports.tasksCommand = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const economy_js_1 = require("./economy.js");
-(0, app_1.initializeApp)();
+if ((0, app_1.getApps)().length === 0)
+    (0, app_1.initializeApp)();
 const db = (0, firestore_1.getFirestore)();
 const REGION = 'europe-west1';
 const editableRoles = new Set(['edit']);
@@ -567,4 +568,8 @@ exports.tasksCommand = (0, https_1.onCall)({ region: REGION, cors: true, enforce
         return { result: await equipProfileItem(normalized, request.auth.uid) };
     throw new https_1.HttpsError('invalid-argument', 'Неизвестная команда.');
 });
+var recipes_shopping_js_1 = require("./recipes-shopping.js");
+Object.defineProperty(exports, "shoppingImport", { enumerable: true, get: function () { return recipes_shopping_js_1.shoppingImport; } });
+Object.defineProperty(exports, "shoppingResolveImport", { enumerable: true, get: function () { return recipes_shopping_js_1.shoppingResolveImport; } });
+Object.defineProperty(exports, "parseRecipeUrl", { enumerable: true, get: function () { return recipes_shopping_js_1.parseRecipeUrl; } });
 //# sourceMappingURL=index.js.map

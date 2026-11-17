@@ -29,6 +29,7 @@ import {
 const APP_ACCESS: Record<ShareableAppName, { label: string; description: string }> = {
   tasks: { label: APP_LABELS.tasks, description: APP_DESCRIPTIONS.tasks },
   shopping: { label: APP_LABELS.shopping, description: APP_DESCRIPTIONS.shopping },
+  recipes: { label: APP_LABELS.recipes, description: APP_DESCRIPTIONS.recipes },
   salary: { label: APP_LABELS.salary, description: APP_DESCRIPTIONS.salary },
   payments: { label: APP_LABELS.payments, description: APP_DESCRIPTIONS.payments },
 };
@@ -51,6 +52,7 @@ export function AppConnectionsPage() {
   const [selectedApps, setSelectedApps] = useState<AppSharingRoles>({
     tasks: 'edit',
     shopping: 'edit',
+    recipes: 'edit',
     salary: 'edit',
     payments: 'edit',
   });
@@ -58,11 +60,13 @@ export function AppConnectionsPage() {
   const membersQuery = useFamilyMembers(familyId, Boolean(user));
   const tasksWorkspace = useFamilyAppAccess(user?.uid, 'tasks');
   const shoppingWorkspace = useFamilyAppAccess(user?.uid, 'shopping');
+  const recipesWorkspace = useFamilyAppAccess(user?.uid, 'recipes');
   const salaryWorkspace = useFamilyAppAccess(user?.uid, 'salary');
   const paymentsWorkspace = useFamilyAppAccess(user?.uid, 'payments');
   const appWorkspaces = {
     tasks: tasksWorkspace,
     shopping: shoppingWorkspace,
+    recipes: recipesWorkspace,
     salary: salaryWorkspace,
     payments: paymentsWorkspace,
   } as const;
@@ -82,6 +86,7 @@ export function AppConnectionsPage() {
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyMembers(familyId) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'tasks', user.uid) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'shopping', user.uid) });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'recipes', user.uid) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'salary', user.uid) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'payments', user.uid) });
         }
@@ -170,6 +175,7 @@ export function AppConnectionsPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.familyMembers(familyId) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'tasks', user.uid) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'shopping', user.uid) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'recipes', user.uid) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'salary', user.uid) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.familyAppAccess(familyId, 'payments', user.uid) }),
         ...SHAREABLE_APP_NAMES.map((appName) =>

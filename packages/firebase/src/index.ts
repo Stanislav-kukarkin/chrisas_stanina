@@ -67,8 +67,14 @@ export {
   shoppingItemPath,
   shoppingFavoritesCollectionPath,
   shoppingFavoritePath,
+  shoppingListsCollectionPath,
+  shoppingListPath,
+  shoppingListItemsCollectionPath,
+  shoppingListItemPath,
   salarySettingsCollectionPath,
   salarySettingsPath,
+  recipesCollectionPath,
+  recipePath,
   type FamilyAppName,
 } from './paths';
 export { queryKeys } from './query-keys';
@@ -96,6 +102,11 @@ export {
   useClearCheckedItems,
 } from './hooks/shopping/use-shopping-items';
 export {
+  useShoppingLists,
+  useEnsureMainShoppingList,
+  useCreateShoppingList,
+} from './hooks/shopping/use-shopping-lists';
+export {
   useShoppingFavorites,
   useAddShoppingFavorite,
 } from './hooks/shopping/use-shopping-favorites';
@@ -117,12 +128,36 @@ export {
   type ShoppingFavorite,
   type ShoppingFavoriteInput,
   type ShoppingUnit,
+  type ShoppingList,
+  type ShoppingImportIngredient,
+  type ShoppingImportConflict,
+  type ShoppingImportResult,
+  type ShoppingConflictAction,
+  type ShoppingConflictDecision,
 } from './types/shopping';
 export { SHOPPING_CATEGORIES, SHOPPING_UNITS, type ShoppingCategory } from './constants/shopping-categories';
+export {
+  importIngredientsToShopping,
+  resolveShoppingImport,
+  parseRecipeFromUrl,
+  type ParsedRecipeUrl,
+} from './recipes-shopping';
 export {
   useSalarySettings,
   useUpdateSalarySettings,
 } from './hooks/salary/use-salary-settings';
+export {
+  useRecipes,
+  useCreateRecipe,
+  useUpdateRecipe,
+  useDeleteRecipe,
+} from './hooks/recipes/use-recipes';
+export {
+  type Recipe,
+  type RecipeIngredient,
+  type RecipeInput,
+  type RecipeUpdate,
+} from './types/recipes';
 export {
   type SalarySettings,
   type SalarySettingsInput,

@@ -1,9 +1,29 @@
-export type ShoppingUnit = 'шт' | 'л' | 'кг' | 'г' | 'уп';
+export type ShoppingUnit =
+  | 'шт'
+  | 'г'
+  | 'кг'
+  | 'мл'
+  | 'л'
+  | 'ч. л.'
+  | 'ст. л.'
+  | 'стакан'
+  | 'щепотка'
+  | 'зубчик'
+  | 'пучок'
+  | 'уп';
+
+export interface ShoppingList {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
 export interface ShoppingItem {
   id: string;
   name: string;
-  quantity: number;
+  quantity: number | null;
   unit: ShoppingUnit;
   category?: string;
   note?: string;
@@ -19,7 +39,7 @@ export interface ShoppingItem {
 
 export interface ShoppingItemInput {
   name: string;
-  quantity?: number;
+  quantity?: number | null;
   unit?: ShoppingUnit;
   category?: string;
   note?: string;
@@ -36,6 +56,40 @@ export interface ShoppingFavorite {
   unit: ShoppingUnit;
   category?: string;
   store?: string;
+}
+
+export interface ShoppingImportIngredient {
+  id: string;
+  name: string;
+  quantity: number | null;
+  unit: ShoppingUnit;
+  note?: string;
+}
+
+export interface ShoppingImportConflict {
+  id: string;
+  itemId: string;
+  name: string;
+  currentQuantity: number | null;
+  currentUnit: ShoppingUnit;
+  requestedQuantity: number | null;
+  requestedUnit: ShoppingUnit;
+}
+
+export interface ShoppingImportResult {
+  requestId: string;
+  added: number;
+  existing: number;
+  conflicts: ShoppingImportConflict[];
+}
+
+export type ShoppingConflictAction = 'keep' | 'set' | 'add' | 'custom';
+
+export interface ShoppingConflictDecision {
+  conflictId: string;
+  action: ShoppingConflictAction;
+  quantity?: number | null;
+  unit?: ShoppingUnit;
 }
 
 export interface ShoppingFavoriteInput {

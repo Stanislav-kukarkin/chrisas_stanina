@@ -9,7 +9,7 @@ import { getDefaultFamilyId } from './config';
 import { getFirebaseFirestore } from './init';
 import { familyMemberPath } from './paths';
 
-export const WORKSPACE_APP_NAMES = ['tasks', 'shopping', 'salary', 'payments'] as const;
+export const WORKSPACE_APP_NAMES = ['tasks', 'shopping', 'recipes', 'salary', 'payments'] as const;
 export type WorkspaceAppName = (typeof WORKSPACE_APP_NAMES)[number];
 export type WorkspaceRole = 'view' | 'edit';
 export type WorkspaceSource = 'personal' | 'shared' | 'legacy';
@@ -78,7 +78,16 @@ export async function ensureUserWorkspaces(uid: string, email: string): Promise<
     workspaceStep('Чтение старого пространства', getDoc(legacyMemberRef)),
     workspaceStep('Чтение личных доступов', Promise.all(personalAccessRefs.map((reference) => getDoc(reference)))),
     workspaceStep('Чтение старых доступов', Promise.all(legacyAccessRefs.map((reference) => getDoc(reference)))),
-    workspaceStep('Чтение активных пространств', Promise.all(pointerRefs.map((reference) => getDoc(reference)))),
+    workspaceStep('Чтение активных пространств', Promise.all(pointerRefs.map(async (reference, index) => {
+      try {
+        return await getDoc(reference);
+      } catch (error) {
+        // During a rolling deployment old rules do not recognize a newly added app yet.
+        // Its missing pointer must not block established app workspaces.
+        if (WORKSPACE_APP_NAMES[index] === 'recipes') return null;
+        throw error;
+      }
+    }))),
   ]);
 
   if (!family.exists()) {
@@ -103,35 +112,42 @@ export async function ensureUserWorkspaces(uid: string, email: string): Promise<
   const isOriginalLegacyMember = legacyMember.exists()
     && (legacyMember.data().accessVersion === undefined || legacyMember.data().source === 'legacy');
 
-  await Promise.all(WORKSPACE_APP_NAMES.map(async (_, index) => {
-    if (!personalAccess[index]?.exists()) {
-      await workspaceStep(`Создание личного доступа ${WORKSPACE_APP_NAMES[index]}`, setDoc(personalAccessRefs[index]!, {
-        uid,
-        role: 'edit',
-        source: 'personal',
-        updatedAt: serverTimestamp(),
-      }));
-    }
-    if (isOriginalLegacyMember && !legacyAccess[index]?.exists()) {
-      await workspaceStep(`Создание старого доступа ${WORKSPACE_APP_NAMES[index]}`, setDoc(legacyAccessRefs[index]!, {
-        uid,
-        role: 'edit',
-        source: 'legacy',
-        updatedAt: serverTimestamp(),
-      }));
-    }
-    if (pointers[index]?.exists()) return;
+  await Promise.all(WORKSPACE_APP_NAMES.map(async (appName, index) => {
+    try {
+      if (!personalAccess[index]?.exists()) {
+        await workspaceStep(`Создание личного доступа ${appName}`, setDoc(personalAccessRefs[index]!, {
+          uid,
+          role: 'edit',
+          source: 'personal',
+          updatedAt: serverTimestamp(),
+        }));
+      }
+      if (isOriginalLegacyMember && !legacyAccess[index]?.exists()) {
+        await workspaceStep(`Создание старого доступа ${appName}`, setDoc(legacyAccessRefs[index]!, {
+          uid,
+          role: 'edit',
+          source: 'legacy',
+          updatedAt: serverTimestamp(),
+        }));
+      }
+      if (pointers[index]?.exists()) return;
 
-    const legacyRole = validRole(legacyAccess[index]?.data());
-    const useLegacy = isOriginalLegacyMember
-      && (legacyRole !== null
-        || legacyMember.data().source === 'legacy'
-        || legacyMember.data().accessVersion === undefined);
-    await workspaceStep(`Выбор пространства ${WORKSPACE_APP_NAMES[index]}`, setDoc(pointerRefs[index]!, {
-      familyId: useLegacy ? legacyId : personalId,
-      source: useLegacy ? 'legacy' : 'personal',
-      updatedAt: serverTimestamp(),
-    }));
+      const legacyRole = validRole(legacyAccess[index]?.data());
+      const useLegacy = isOriginalLegacyMember
+        && (legacyRole !== null
+          || legacyMember.data().source === 'legacy'
+          || legacyMember.data().accessVersion === undefined);
+      await workspaceStep(`Выбор пространства ${appName}`, setDoc(pointerRefs[index]!, {
+        familyId: useLegacy ? legacyId : personalId,
+        source: useLegacy ? 'legacy' : 'personal',
+        updatedAt: serverTimestamp(),
+      }));
+    } catch (error) {
+      // Allows an updated client to roll out before the matching Firestore rules.
+      // Other established apps must not become unavailable while `recipes` is pending deployment.
+      if (appName === 'recipes') return;
+      throw error;
+    }
   }));
 }
 

@@ -85,7 +85,7 @@ export function ShoppingItemRow({
             className="min-w-0 flex-1"
           />}
           <span className="inline-flex shrink-0 items-center rounded-md bg-zinc-800/80 px-2 py-1.5 text-xs text-zinc-200">
-            {item.quantity} {item.unit}
+            {item.quantity === null ? 'по вкусу' : `${item.quantity} ${item.unit}`}
           </span>
           <span className="hidden shrink-0 sm:inline-flex">{creatorBadge}</span>
           <button
@@ -139,12 +139,14 @@ export function ShoppingItemRow({
               <span className="mb-1 block text-zinc-400">Количество</span>
               <input
                 type="number"
-                min={1}
-                value={item.quantity}
+                min={0}
+                step="any"
+                value={item.quantity ?? ''}
                 disabled={readOnly}
                 onChange={(event) =>
-                  onUpdate(item.id, { quantity: Number(event.target.value) || 1 })
+                  onUpdate(item.id, { quantity: event.target.value === '' ? null : Math.max(0, Number(event.target.value)) })
                 }
+                placeholder="По вкусу"
                 className="w-full rounded-lg border border-zinc-700 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-violet-500"
               />
             </label>

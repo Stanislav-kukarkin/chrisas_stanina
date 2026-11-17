@@ -15,10 +15,14 @@ export const queryKeys = {
   appInvitations: (uid: string) => ['appInvitations', uid] as const,
   appWorkspace: (uid: string, appName: FamilyAppName) =>
     ['appWorkspace', uid, appName] as const,
-  shoppingItems: (familyId: string) =>
-    [...queryKeys.familyApp(familyId, 'shopping'), 'items'] as const,
+  shoppingLists: (familyId: string) =>
+    [...queryKeys.familyApp(familyId, 'shopping'), 'lists'] as const,
+  shoppingItems: (familyId: string, listId = 'main') =>
+    [...queryKeys.familyApp(familyId, 'shopping'), 'lists', listId, 'items'] as const,
   shoppingFavorites: (familyId: string) =>
     [...queryKeys.familyApp(familyId, 'shopping'), 'favorites'] as const,
   salarySettings: (familyId: string, uid: string) =>
     [...queryKeys.familyApp(familyId, 'salary'), 'settings', uid] as const,
+  recipes: (familyId: string) =>
+    [...queryKeys.familyApp(familyId, 'recipes'), 'recipes'] as const,
 };

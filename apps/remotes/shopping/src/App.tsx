@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   getFirebaseConfigFromEnv,
   initializeFirebase,
@@ -11,6 +11,9 @@ import {
   useFirebaseUser,
   useShoppingFavorites,
   useShoppingItems,
+  useShoppingLists,
+  useEnsureMainShoppingList,
+  useCreateShoppingList,
   useToggleShoppingItem,
   useUpdateShoppingItem,
   type ShoppingFavorite,
@@ -29,16 +32,42 @@ export default function App() {
   const user = useFirebaseUser();
   const access = useFamilyAppAccess(user?.uid, 'shopping');
   const familyId = access.familyId ?? '';
-  const { data: items = [], isLoading, isError, refetch } = useShoppingItems(familyId, access.canView);
+  const storageKey = familyId ? `shopping:last-list:${familyId}` : '';
+  const { data: lists = [] } = useShoppingLists(familyId, access.canView);
+  const [listSelection, setListSelection] = useState({ familyId: '', listId: 'main' });
+  const rememberedListId = storageKey ? window.localStorage.getItem(storageKey) || 'main' : 'main';
+  const preferredListId = listSelection.familyId === familyId ? listSelection.listId : rememberedListId;
+  const listId = lists.length > 0 && !lists.some((list) => list.id === preferredListId) ? 'main' : preferredListId;
+  const { data: items = [], isLoading, isError, refetch } = useShoppingItems(familyId, access.canView, listId);
   const { data: favorites = [] } = useShoppingFavorites(familyId, access.canView);
   const { data: members = [] } = useFamilyMembers(familyId, access.canView, 'shopping');
 
-  const addItem = useAddShoppingItem(familyId);
-  const updateItem = useUpdateShoppingItem(familyId);
-  const toggleItem = useToggleShoppingItem(familyId);
-  const deleteItem = useDeleteShoppingItem(familyId);
-  const clearChecked = useClearCheckedItems(familyId);
+  const addItem = useAddShoppingItem(familyId, listId);
+  const updateItem = useUpdateShoppingItem(familyId, listId);
+  const toggleItem = useToggleShoppingItem(familyId, listId);
+  const deleteItem = useDeleteShoppingItem(familyId, listId);
+  const clearChecked = useClearCheckedItems(familyId, listId);
   const addFavorite = useAddShoppingFavorite(familyId);
+  const ensureMainList = useEnsureMainShoppingList(familyId);
+  const createList = useCreateShoppingList(familyId);
+
+  useEffect(() => {
+    if (!user || !access.canEdit || !familyId || ensureMainList.isPending || lists.some((list) => list.id === 'main' && list.createdBy)) return;
+    void ensureMainList.mutateAsync(user.uid);
+  }, [access.canEdit, ensureMainList, familyId, lists, user]);
+
+  function chooseList(nextListId: string) {
+    setListSelection({ familyId, listId: nextListId });
+    if (storageKey) window.localStorage.setItem(storageKey, nextListId);
+  }
+
+  async function handleCreateList() {
+    if (!user || !access.canEdit) return;
+    const name = window.prompt('Название нового списка');
+    if (!name?.trim()) return;
+    const id = await createList.mutateAsync({ name, createdBy: user.uid });
+    chooseList(id);
+  }
 
   const activeItems = items.filter((item) => !item.checked);
   const checkedItems = items.filter((item) => item.checked);
@@ -103,7 +132,7 @@ export default function App() {
     }
     await addFavorite.mutateAsync({
       name: item.name,
-      quantity: item.quantity,
+        quantity: item.quantity ?? 1,
       unit: item.unit,
       category: item.category,
       store: item.store,
@@ -166,6 +195,20 @@ export default function App() {
           />
           <p className="mt-4 text-zinc-400">Общий список семьи — добавляйте, отмечайте, делитесь</p>
           {!access.canEdit && <p className="mt-2 inline-flex rounded-full bg-amber-400/10 px-3 py-1 text-xs text-amber-200">Доступ только для просмотра</p>}
+        </div>
+
+        <div className="mt-7 flex items-center gap-2 overflow-x-auto pb-1" aria-label="Списки покупок">
+          {lists.map((list) => (
+            <button
+              key={list.id}
+              type="button"
+              onClick={() => chooseList(list.id)}
+              className={`shrink-0 rounded-xl border px-4 py-2 text-sm transition ${list.id === listId ? 'border-violet-400/60 bg-violet-500/15 text-violet-100' : 'border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-600'}`}
+            >
+              {list.name}
+            </button>
+          ))}
+          {access.canEdit && <button type="button" onClick={handleCreateList} className="shrink-0 rounded-xl border border-dashed border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:border-violet-500/50 hover:text-violet-300">+ Новый список</button>}
         </div>
 
         <GlassPanel className="mt-10 p-4 sm:p-5" index={0}>

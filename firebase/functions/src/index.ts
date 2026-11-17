@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase-admin/app';
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { FieldValue, Timestamp, getFirestore, type DocumentData, type Transaction } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import {
@@ -16,7 +16,7 @@ import {
   type Difficulty,
 } from './economy.js';
 
-initializeApp();
+if (getApps().length === 0) initializeApp();
 
 const db = getFirestore();
 const REGION = 'europe-west1';
@@ -546,3 +546,5 @@ export const tasksCommand = onCall({ region: REGION, cors: true, enforceAppCheck
   if (command === 'equipProfileItem') return { result: await equipProfileItem(normalized, request.auth.uid) };
   throw new HttpsError('invalid-argument', 'Неизвестная команда.');
 });
+
+export { shoppingImport, shoppingResolveImport, parseRecipeUrl } from './recipes-shopping.js';

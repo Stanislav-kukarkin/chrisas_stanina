@@ -12,4 +12,6 @@ export const SHOPPING_CATEGORIES = [
 
 export type ShoppingCategory = (typeof SHOPPING_CATEGORIES)[number];
 
-export const SHOPPING_UNITS = ['шт', 'л', 'кг', 'г', 'уп'] as const;
+export const SHOPPING_UNITS = [
+  'шт', 'г', 'кг', 'мл', 'л', 'ч. л.', 'ст. л.', 'стакан', 'щепотка', 'зубчик', 'пучок', 'уп',
+] as const;
