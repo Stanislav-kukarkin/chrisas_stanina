@@ -104,7 +104,7 @@ export function SettingsModal({
       const message = saveError instanceof Error ? saveError.message : String(saveError);
       setError(
         message.includes('permission-denied') || message.includes('Missing or insufficient permissions')
-          ? 'Не удалось сохранить настройки: нет доступа к выбранному пространству Salary Flow.'
+          ? 'Не удалось сохранить настройки: нет доступа к выбранному пространству Денежного трекера.'
           : `Не удалось сохранить настройки: ${message}`,
       );
     }

@@ -298,7 +298,7 @@ export function AppConnectionsPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="font-medium text-zinc-100">Старая общая связь</p>
-                <p className="mt-1 text-sm text-zinc-400">Эти аккаунты уже были объединены в базе. Для них сохранён доступ к семейным делам, покупкам, Salary Flow и платежам.</p>
+                <p className="mt-1 text-sm text-zinc-400">Эти аккаунты уже были объединены в базе. Для них сохранён доступ к семейным делам, покупкам, Денежному трекеру и платежам.</p>
                 <p className="mt-3 text-sm text-zinc-300">{legacyMembers.map((member) => member.profile?.displayName || member.email).join(' · ')}</p>
               </div>
               <button type="button" disabled={legacyBusy} onClick={() => void handleLeaveLegacy()} className="rounded-lg border border-amber-500/30 px-3 py-2 text-sm text-amber-200 hover:bg-amber-500/10 disabled:opacity-50">

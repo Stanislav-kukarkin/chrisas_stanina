@@ -90,7 +90,7 @@ export default function App() {
       <div className="relative flex min-h-full flex-1 flex-col overflow-hidden">
         <Aurora />
         <div className="relative z-10 flex flex-1 items-center justify-center text-zinc-400">
-          Загрузка Salary Flow...
+          Загрузка Денежного трекера...
         </div>
       </div>
     );
@@ -103,7 +103,7 @@ export default function App() {
         <div className="relative z-10 flex flex-1 items-center justify-center px-6 text-center text-rose-200">
           {access.error instanceof Error
             ? access.error.message
-            : 'Нет доступа к пространству Salary Flow.'}
+            : 'Нет доступа к пространству Денежного трекера.'}
         </div>
       </div>
     );
@@ -116,7 +116,7 @@ export default function App() {
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-8 md:px-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <BlurText text="Salary Flow" as="h1" align="left" className="text-3xl md:text-4xl" />
+            <BlurText text="Денежный трекер" as="h1" align="left" className="text-3xl md:text-4xl" />
             <p className="mt-2 text-sm text-zinc-400">Сколько ты уже заработал сегодня</p>
           </div>
           <button

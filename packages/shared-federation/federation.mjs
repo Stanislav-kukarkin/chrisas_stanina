@@ -41,7 +41,7 @@ export const APP_LABELS = {
   recipes: 'Рецепты',
   budget: 'Бюджет',
   cashback: 'Кэшбеки',
-  salary: 'Salary Flow',
+  salary: 'Денежный трекер',
   payments: 'Мои платежи',
   'cashback-wallpapers': 'Обои кэшбэков',
 };

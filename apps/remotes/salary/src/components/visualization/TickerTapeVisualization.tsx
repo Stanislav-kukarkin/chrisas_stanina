@@ -42,7 +42,7 @@ export function TickerTapeVisualization({
     >
       <div className="overflow-hidden rounded-lg border border-zinc-700/80 bg-zinc-950/90">
         <div className="border-b border-zinc-800 bg-zinc-900/80 px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-500">
-          Salary Flow · LIVE
+          Денежный трекер · LIVE
         </div>
         <div className="relative h-9 overflow-hidden">
           <div
